@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BabyPay – Parental Leave Estimator</title>
+  <link rel="icon" href="icon.png" type="image/png" />
+
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-4BB529LTKE"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-4BB529LTKE');
+  </script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 24px;
+      text-align: center;
+      background-color: #fafafa;
+    }
+
+    header img {
+      width: 60px;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin: 8px 0 4px 0;
+    }
+
+    p.subtitle {
+      font-size: 14px;
+      color: #555;
+      margin-bottom: 24px;
+    }
+
+    .input-group {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .input-group span {
+      padding: 6px;
+      background-color: #eee;
+      border: 1px solid #ccc;
+      border-right: none;
+      border-radius: 4px 0 0 4px;
+      font-weight: bold;
+    }
+
+    .input-group input {
+      width: 100%;
+      padding: 6px;
+      border: 1px solid #ccc;
+      border-radius: 0 4px 4px 0;
+      border-left: none;
+      box-sizing: border-box;
+    }
+
+    .inline-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .inline-row input[type="number"] {
+      flex: 1;
+      padding: 6px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    .pay-type-options {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .pay-type-options label {
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .tax-toggle {
+      font-size: 12px;
+      margin-bottom: 10px;
+    }
+
+    button {
+      padding: 10px 16px;
+      width: 100%;
+      max-width: 300px;
+      margin: 8px auto;
+      background-color: #2196F3;
+      color: white;
+      border: none;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      display: block;
+    }
+
+    button:hover {
+      background-color: #1976D2;
+    }
+
+    #result {
+      margin-top: 12px;
+      font-size: 13px;
+      text-align: left;
+    }
+
+    .disclaimer {
+      font-size: 10px;
+      color: gray;
+      margin-top: 16px;
+      line-height: 1.4;
+    }
+
+    /* Product Section – FIXED WIDTH ISSUE */
+    .product-section {
+      margin-top: 18px;
+      text-align: left;
+      width: 100%;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+      opacity: 0;
+      transform: translateY(4px);
+      display: none;
+      transition: opacity 1.1s ease 0.25s, transform 1.1s ease 0.25s;
+    }
+
+    .product-section.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .product-section-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #888;
+      margin-bottom: 6px;
+      text-align: left;
+    }
+
+    .product-card-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .product-card {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 8px;
+      background-color: #ffffff;
+      border: 1px solid #e5e5e5;
+      font-size: 12px;
+    }
+
+    .product-card-thumb {
+      width: 32px;
+      height: auto;
+      border-radius: 4px;
+      object-fit: contain;
+    }
+
+    .product-card-title {
+      font-weight: bold;
+      font-size: 12px;
+      margin: 0;
+    }
+
+    .product-card-link {
+      font-size: 11.5px;
+      color: #777;
+      text-decoration: none;
+    }
+
+    .product-card-link:hover {
+      color: #1976D2;
+      text-decoration: underline;
+    }
+
+    .sponsor {
+      margin-top: 22px;
+    }
+
+    .sponsor a {
+      display: inline-block;
+      background-color: #F48FB1;
+      color: white;
+      text-decoration: none;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: bold;
+      transition: background-color 0.2s ease;
+    }
+
+    .sponsor a:hover {
+      background-color: #EC407A;
+    }
+
+    /* Info Modal */
+    #userTaxModal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.55);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    #userTaxModalContent {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      width: 280px;
+      text-align: left;
+      font-size: 13px;
+    }
+
+    .info-icon {
+      cursor: pointer;
+    }
+
+    /* Footer links */
+    .footer-links {
+      margin-top: 18px;
+      font-size: 11px;
+      color: #777;
+    }
+
+    .footer-links a {
+      color: #777;
+      text-decoration: none;
+      margin: 0 6px;
+    }
+
+    .footer-links a:hover {
+      text-decoration: underline;
+      color: #444;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <img src="icon.png" alt="BabyPay Logo" />
+    <h1>BabyPay Estimator</h1>
+    <p class="subtitle">Plan your parental leave income with clarity</p>
+  </header>
+
+  <div class="input-group">
+    <span>$</span>
+    <input id="userIncome" type="number" placeholder="Non Primary Caretaker (Gross Monthly)" />
+  </div>
+
+  <div class="input-group">
+    <span>$</span>
+    <input id="wifeIncome" type="number" placeholder="Primary Caretaker (Gross Monthly)" />
+  </div>
+
+  <div class="inline-row">
+    <input id="paidWeeks" type="number" placeholder="Paid Leave Weeks (Primary Caretaker Only)" />
+    <div class="pay-type-options">
+      <label><input type="checkbox" id="fullPay"> Full</label>
+      <label><input type="checkbox" id="halfPay"> Half</label>
+    </div>
+  </div>
+
+  <div class="tax-toggle">
+    <label style="display: flex; align-items: center; justify-content: center; gap: 6px;">
+      <input type="checkbox" id="showAfterTax" />
+      <span>Show After-Tax Estimates</span>
+    </label>
+  </div>
+
+  <button id="calculate">BabyPay</button>
+  <button id="return2">Return to Work - 2 Days</button>
+  <button id="return3">Return to Work - 3 Days</button>
+  <button id="return4">Return to Work - 4 Days</button>
+
+  <div id="result"></div>
+
+  <div class="sponsor">
+    <a href="https://ko-fi.com/babypay" target="_blank">&#10084; Support BabyPay</a>
+  </div>
+
+  <!-- Recommended Products -->
+  <div class="product-section" style="display:none;">
+    <div class="product-section-title">Recommended by BabyPay (Affiliate)</div>
+    <div class="product-card-list">
+
+      <div class="product-card">
+        <img src="calendar.png" class="product-card-thumb" />
+        <div>
+          <p class="product-card-title">Family Calendar</p>
+          <a href="https://amzn.to/4498EmX" target="_blank" class="product-card-link">View on Amazon</a>
+        </div>
+      </div>
+
+      <div class="product-card">
+        <img src="babyseat.png" class="product-card-thumb" />
+        <div>
+          <p class="product-card-title">Car Seat</p>
+          <a href="https://amzn.to/3LVURJY" target="_blank" class="product-card-link">View on Amazon</a>
+        </div>
+      </div>
+
+      <div class="product-card">
+        <img src="babybassinet.png" class="product-card-thumb" />
+        <div>
+          <p class="product-card-title">Bassinet</p>
+          <a href="https://amzn.to/49Bkuty" target="_blank" class="product-card-link">View on Amazon</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <p class="disclaimer">
+    * BabyPay is for general planning only and does not constitute financial advice.<br>
+    These figures are estimates only and should not be considered accurate data.<br>
+    Please confirm all details with your employer, Centrelink, or Services Australia.
+  </p>
+
+  <!-- Footer: Terms + Privacy -->
+  <div class="footer-links">
+    <a href="terms.html">Terms & Conditions</a> • 
+    <a href="privacy.html">Privacy Policy</a>
+  </div>
+
+  <!-- Tax Breakdown Modal -->
+  <div id="userTaxModal">
+    <div id="userTaxModalContent"></div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "BabyPay",
+  "version": "4.5",
+  "description": "Calculate combined income during parental leave scenarios, with before- and after-tax breakdowns.",
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon.png",
+      "48": "icon.png",
+      "128": "icon.png"
+    }
+  },
+  "icons": {
+    "16": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
+  },
+  "permissions": ["storage"]
+}

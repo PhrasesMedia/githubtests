@@ -1,21 +1,29 @@
 // ======================================
-// popup.js (BabyPay v4.8 + Medicare levy + PDF calendar)
+// popup.js (BabyPay v4.9 – Medicare levy + PDF logo + weekly column)
 // • Renders data on button click or live when inputs change.
 // • Monthly-only tax breakdown in info-modals using original gross values.
 // • “Government Pay (24 weeks)” & “Paid Leave (<n> weeks)” cards.
 // • Government Pay card notes the $948.10/week gross rate.
 // • After-tax includes income tax + 2% Medicare levy.
-// • New: Generate weekly maternity calendar PDF (Gov + Paid Leave).
+// • PDF calendar now includes:
+//      - BabyPay logo
+//      - Weekly Amount column (Gov vs Paid weeks)
 // ======================================
 
 let lastAction = null;      // 'babyPay' or 'return'
 let lastReturnDays = null;  // stores days for return-to-work
+let logoDataUrl = null;     // cached BabyPay logo for PDF
 
 // ——— Utility functions ———
 
 // Format a number into “$X,XXX/month”
 function formatCurrency(amount) {
   return "$" + amount.toLocaleString(undefined, { maximumFractionDigits: 0 }) + "/month";
+}
+
+// Format a number into “$X,XXX/week”
+function formatCurrencyWeek(amount) {
+  return "$" + amount.toLocaleString(undefined, { maximumFractionDigits: 0 }) + "/week";
 }
 
 // Australian income tax brackets (annual → income tax only, no Medicare)
@@ -171,6 +179,26 @@ function formatDateShort(d) {
   return `${day}/${month}/${year}`;
 }
 
+// ——— Preload BabyPay logo for PDF ———
+
+function preloadLogo() {
+  try {
+    const img = new Image();
+    img.src = "icon.png";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0);
+      logoDataUrl = canvas.toDataURL("image/png");
+    };
+  } catch (e) {
+    // If anything fails, logo just won't be used – PDF will still generate
+    logoDataUrl = null;
+  }
+}
+
 // ——— PDF calendar generator ———
 
 function generatePDFCalendar(govWeeks, paidWeeks, userGross, wifeGross, showAfterTax) {
@@ -191,9 +219,22 @@ function generatePDFCalendar(govWeeks, paidWeeks, userGross, wifeGross, showAfte
   const paidStart = addDays(govEnd, 1);
   const paidEnd   = addDays(paidStart, paidWeeksInt * 7 - 1);
 
-  const userDisplay  = getDisplayIncome(userGross, showAfterTax);
-  const wifeDisplay  = getDisplayIncome(wifeGross, showAfterTax);
-  const labelType    = showAfterTax ? "Net" : "Gross";
+  // Monthly figures (net/gross) for income
+  const govMonthlyGross = 948.10 * 52 / 12;
+  const govDisplay      = getDisplayIncome(govMonthlyGross, showAfterTax);
+  const userDisplay     = getDisplayIncome(userGross,     showAfterTax);
+  const wifeDisplay     = getDisplayIncome(wifeGross,     showAfterTax);
+  const labelType       = showAfterTax ? "Net" : "Gross";
+
+  // Weekly combined totals (same each week within a phase)
+  const weeklyGovAmount  = (userDisplay + govDisplay)  * 12 / 52;
+  const weeklyPaidAmount = (userDisplay + wifeDisplay) * 12 / 52;
+
+  // Logo in top-right (if available)
+  if (logoDataUrl) {
+    // x, y, width, height
+    doc.addImage(logoDataUrl, "PNG", 170, 8, 22, 22);
+  }
 
   // Title and summary
   doc.setFontSize(18);
@@ -201,11 +242,19 @@ function generatePDFCalendar(govWeeks, paidWeeks, userGross, wifeGross, showAfte
 
   doc.setFontSize(11);
   doc.text(`Generated on: ${today.toDateString()}`, 14, 28);
-  doc.text(`Assumed start date for Government Pay: ${govStart.toDateString()}`, 14, 34);
+  doc.text(`Assumed start date for Government Pay: ${today.toDateString()}`, 14, 34);
 
   doc.setFontSize(12);
-  doc.text(`Government Pay (24 weeks): ${formatDateShort(govStart)} → ${formatDateShort(govEnd)}`, 14, 46);
-  doc.text(`Paid Leave (${paidWeeksInt} weeks): ${formatDateShort(paidStart)} → ${formatDateShort(paidEnd)}`, 14, 53);
+  doc.text(
+    `Government Pay (24 weeks): ${formatDateShort(govStart)} → ${formatDateShort(govEnd)}`,
+    14,
+    46
+  );
+  doc.text(
+    `Paid Leave (${paidWeeksInt} weeks): ${formatDateShort(paidStart)} → ${formatDateShort(paidEnd)}`,
+    14,
+    53
+  );
 
   doc.text(
     `Non-Primary (${labelType} monthly): ${formatCurrency(Math.round(userDisplay))}`,
@@ -227,7 +276,8 @@ function generatePDFCalendar(govWeeks, paidWeeks, userGross, wifeGross, showAfte
       String(i + 1),
       "Government Pay",
       formatDateShort(wStart),
-      formatDateShort(wEnd)
+      formatDateShort(wEnd),
+      formatCurrencyWeek(Math.round(weeklyGovAmount))
     ]);
   }
 
@@ -239,16 +289,32 @@ function generatePDFCalendar(govWeeks, paidWeeks, userGross, wifeGross, showAfte
       String(index),
       "Paid Leave",
       formatDateShort(wStart),
-      formatDateShort(wEnd)
+      formatDateShort(wEnd),
+      formatCurrencyWeek(Math.round(weeklyPaidAmount))
     ]);
   }
 
-  // Weekly calendar table
+  // Weekly calendar table with blue header + zebra rows
   doc.autoTable({
     startY: 80,
-    head: [["Week #", "Type", "Start", "End"]],
+    head: [["Week #", "Type", "Start", "End", "Weekly Amount"]],
     body: rows,
-    styles: { fontSize: 9 }
+    styles: { fontSize: 9, cellPadding: 2 },
+    headStyles: {
+      fillColor: [33, 150, 243],
+      textColor: 255,
+      halign: "center"
+    },
+    alternateRowStyles: {
+      fillColor: [245, 245, 245]
+    },
+    columnStyles: {
+      0: { halign: "center", cellWidth: 15 },  // Week #
+      1: { cellWidth: 35 },                    // Type
+      2: { cellWidth: 30 },                    // Start
+      3: { cellWidth: 30 },                    // End
+      4: { cellWidth: 35 }                     // Weekly Amount
+    }
   });
 
   doc.save("BabyPay_Maternity_Calendar.pdf");
@@ -346,6 +412,8 @@ function calculateReturnWork(days) {
 (function init() {
   document.getElementById("result").innerHTML = "";
 
+  preloadLogo(); // prefetch BabyPay logo for the PDF
+
   document.getElementById("calculate").addEventListener("click", calculateBabyPay);
   document.getElementById("return2").addEventListener("click", () => calculateReturnWork(2));
   document.getElementById("return3").addEventListener("click", () => calculateReturnWork(3));
@@ -378,7 +446,7 @@ function calculateReturnWork(days) {
     });
   }
 
-  // New: Download calendar button handler
+  // Download calendar button handler
   const downloadBtn = document.getElementById("downloadCalendar");
   if (downloadBtn) {
     downloadBtn.addEventListener("click", () => {

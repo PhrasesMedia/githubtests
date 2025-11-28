@@ -1,380 +1,602 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BabyPay – Parental Leave Estimator</title>
-  <link rel="icon" href="icon.png" type="image/png" />
-
-  <!-- Google Analytics -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-4BB529LTKE"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-4BB529LTKE');
-  </script>
-
-  <!-- jsPDF + AutoTable for PDF calendar generation -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BabyPay Estimator</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 600px;
-      margin: 40px auto;
-      padding: 24px;
-      text-align: center;
-      background-color: #fafafa;
-    }
-
-    header img {
-      width: 60px;
-    }
-
-    h1 {
-      font-size: 24px;
-      margin: 8px 0 4px 0;
-    }
-
-    p.subtitle {
-      font-size: 14px;
-      color: #555;
-      margin-bottom: 24px;
-    }
-
-    .input-group {
-      display: flex;
-      align-items: center;
-      margin-bottom: 10px;
-    }
-
-    .input-group span {
-      padding: 6px;
-      background-color: #eee;
-      border: 1px solid #ccc;
-      border-right: none;
-      border-radius: 4px 0 0 4px;
-      font-weight: bold;
-    }
-
-    .input-group input {
-      width: 100%;
-      padding: 6px;
-      border: 1px solid #ccc;
-      border-radius: 0 4px 4px 0;
-      border-left: none;
+    * {
+      margin: 0;
+      padding: 0;
       box-sizing: border-box;
     }
 
-    .inline-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background-color: #f5f5f5;
+      padding: 20px;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .header img {
+      width: 60px;
+      height: 60px;
       margin-bottom: 10px;
     }
 
-    .inline-row input[type="number"] {
-      flex: 1;
-      padding: 6px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
+    .header h1 {
+      font-size: 28px;
+      margin-bottom: 8px;
+      color: #333;
     }
 
-    .pay-type-options {
-      display: flex;
-      gap: 8px;
-      justify-content: center;
-    }
-
-    .pay-type-options label {
-      font-size: 13px;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .tax-toggle {
-      font-size: 12px;
-      margin-bottom: 10px;
-    }
-
-    button {
-      padding: 10px 16px;
-      width: 100%;
-      max-width: 300px;
-      margin: 8px auto;
-      background-color: #2196F3;
-      color: white;
-      border: none;
-      font-weight: bold;
-      border-radius: 6px;
-      cursor: pointer;
+    .header p {
+      color: #666;
       font-size: 14px;
+    }
+
+    .input-group {
+      margin-bottom: 15px;
+    }
+
+    .input-group label {
       display: block;
+      margin-bottom: 5px;
+      color: #555;
+      font-size: 13px;
     }
 
-    button:hover {
-      background-color: #1976D2;
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
     }
 
-    /* Special styling for the PDF download button */
-    #downloadCalendar {
-      background-color: #4CAF50;
+    .input-wrapper::before {
+      content: '$';
+      position: absolute;
+      left: 12px;
+      color: #666;
+      font-size: 16px;
     }
 
-    #downloadCalendar:hover {
-      background-color: #388E3C;
+    input[type="number"] {
+      width: 100%;
+      padding: 10px 10px 10px 28px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    input[type="number"]:focus {
+      outline: none;
+      border-color: #4A90E2;
+    }
+
+    .checkbox-group {
+      display: flex;
+      gap: 20px;
+      margin: 15px 0;
+      font-size: 13px;
+    }
+
+    .checkbox-group label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+    }
+
+    .period-selector {
+      margin: 15px 0;
+      padding: 10px;
+      background: #f9f9f9;
+      border-radius: 4px;
+      text-align: center;
+    }
+
+    .period-selector label {
+      margin: 0 10px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .period-selector input[type="radio"] {
+      margin-right: 5px;
+    }
+
+    .button {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .button-primary {
+      background-color: #4A90E2;
+      color: white;
+    }
+
+    .button-primary:hover {
+      background-color: #357ABD;
+    }
+
+    .button-secondary {
+      background-color: #5CB85C;
+      color: white;
+    }
+
+    .button-secondary:hover {
+      background-color: #4CAE4C;
     }
 
     #result {
-      margin-top: 12px;
-      font-size: 13px;
-      text-align: left;
+      margin-top: 20px;
     }
 
-    .disclaimer {
-      font-size: 10px;
-      color: gray;
-      margin-top: 16px;
-      line-height: 1.4;
-    }
-
-    /* Product Section – FIXED WIDTH ISSUE */
     .product-section {
-      margin-top: 18px;
-      text-align: left;
-      width: 100%;
-      max-width: 600px;
-      margin-left: auto;
-      margin-right: auto;
+      text-align: center;
+      margin: 20px 0;
       opacity: 0;
-      transform: translateY(4px);
-      display: none;
-      transition: opacity 1.1s ease 0.25s, transform 1.1s ease 0.25s;
+      transition: opacity 0.5s;
     }
 
     .product-section.visible {
       opacity: 1;
-      transform: translateY(0);
     }
 
-    .product-section-title {
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: #888;
-      margin-bottom: 6px;
-      text-align: left;
-    }
-
-    .product-card-list {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .product-card {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 8px;
-      border-radius: 8px;
-      background-color: #ffffff;
-      border: 1px solid #e5e5e5;
-      font-size: 12px;
-    }
-
-    .product-card-thumb {
-      width: 32px;
-      height: auto;
-      border-radius: 4px;
-      object-fit: contain;
-    }
-
-    .product-card-title {
-      font-weight: bold;
-      font-size: 12px;
-      margin: 0;
-    }
-
-    .product-card-link {
-      font-size: 11.5px;
-      color: #777;
-      text-decoration: none;
-    }
-
-    .product-card-link:hover {
-      color: #1976D2;
-      text-decoration: underline;
-    }
-
-    .sponsor {
-      margin-top: 22px;
-    }
-
-    .sponsor a {
-      display: inline-block;
-      background-color: #F48FB1;
+    .support-button {
+      background-color: #FF69B4;
       color: white;
-      text-decoration: none;
-      padding: 6px 10px;
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: bold;
-      transition: background-color 0.2s ease;
-    }
-
-    .sponsor a:hover {
-      background-color: #EC407A;
-    }
-
-    /* Info Modal */
-    #userTaxModal {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.55);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-    }
-
-    #userTaxModalContent {
-      background: white;
-      padding: 20px;
-      border-radius: 8px;
-      width: 280px;
-      text-align: left;
-      font-size: 13px;
-    }
-
-    .info-icon {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
       cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      display: inline-block;
+      text-decoration: none;
     }
 
-    /* Footer links */
-    .footer-links {
-      margin-top: 18px;
+    .support-button:hover {
+      background-color: #FF1493;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid #eee;
+    }
+
+    .disclaimer {
       font-size: 11px;
-      color: #777;
+      color: #999;
+      margin-bottom: 15px;
+      line-height: 1.4;
+    }
+
+    .footer-links {
+      font-size: 12px;
     }
 
     .footer-links a {
-      color: #777;
+      color: #4A90E2;
       text-decoration: none;
-      margin: 0 6px;
+      margin: 0 10px;
     }
 
     .footer-links a:hover {
       text-decoration: underline;
-      color: #444;
+    }
+
+    /* Modal styles */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-content {
+      background-color: white;
+      padding: 20px;
+      border-radius: 8px;
+      max-width: 400px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
     }
   </style>
 </head>
-
 <body>
-  <header>
-    <img src="icon.png" alt="BabyPay Logo" />
-    <h1>BabyPay Estimator</h1>
-    <p class="subtitle">Plan your parental leave income with clarity</p>
-  </header>
+  <div class="container">
+    <div class="header">
+      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='24' r='16' fill='%23FFD5A3'/%3E%3Cellipse cx='32' cy='50' rx='20' ry='12' fill='%2387CEEB'/%3E%3Ccircle cx='26' cy='22' r='2' fill='%23333'/%3E%3Ccircle cx='38' cy='22' r='2' fill='%23333'/%3E%3Cpath d='M26 28 Q32 32 38 28' stroke='%23333' fill='none' stroke-width='2'/%3E%3C/svg%3E" alt="Baby Icon">
+      <h1>BabyPay Estimator</h1>
+      <p>Plan your parental leave income with clarity</p>
+    </div>
 
-  <div class="input-group">
-    <span>$</span>
-    <input id="userIncome" type="number" placeholder="Non Primary Caretaker (Gross Monthly)" />
-  </div>
+    <div class="input-group">
+      <label>Non Primary Caretaker (Gross Monthly)</label>
+      <div class="input-wrapper">
+        <input type="number" id="userIncome" placeholder="8000" step="100">
+      </div>
+    </div>
 
-  <div class="input-group">
-    <span>$</span>
-    <input id="wifeIncome" type="number" placeholder="Primary Caretaker (Gross Monthly)" />
-  </div>
+    <div class="input-group">
+      <label>Primary Caretaker (Gross Monthly)</label>
+      <div class="input-wrapper">
+        <input type="number" id="wifeIncome" placeholder="8000" step="100">
+      </div>
+    </div>
 
-  <div class="inline-row">
-    <input id="paidWeeks" type="number" placeholder="Paid Leave Weeks (Primary Caretaker Only)" />
-    <div class="pay-type-options">
-      <label><input type="checkbox" id="fullPay"> Full</label>
-      <label><input type="checkbox" id="halfPay"> Half</label>
+    <div class="input-group">
+      <label>Paid Leave Weeks (Primary Caretaker Only)</label>
+      <input type="number" id="paidWeeks" placeholder="28" step="1" style="padding-left: 12px;">
+    </div>
+
+    <div class="checkbox-group">
+      <label>
+        <input type="radio" name="payType" id="fullPay"> Full
+      </label>
+      <label>
+        <input type="radio" name="payType" id="halfPay" checked> Half
+      </label>
+    </div>
+
+    <div class="checkbox-group">
+      <label>
+        <input type="checkbox" id="showAfterTax">
+        Show After-Tax Estimates
+      </label>
+    </div>
+
+    <div class="period-selector">
+      <label>
+        <input type="radio" name="period" value="weekly"> Weekly
+      </label>
+      <label>
+        <input type="radio" name="period" value="fortnightly"> Fortnightly
+      </label>
+      <label>
+        <input type="radio" name="period" value="monthly" checked> Monthly
+      </label>
+    </div>
+
+    <button class="button button-primary" id="calculate">BabyPay</button>
+    <button class="button button-primary" id="return2">Return to Work - 2 Days</button>
+    <button class="button button-primary" id="return3">Return to Work - 3 Days</button>
+    <button class="button button-primary" id="return4">Return to Work - 4 Days</button>
+
+    <div id="result"></div>
+
+    <div class="product-section" style="display: none;">
+      <a href="#" class="support-button">💝 Support BabyPay</a>
+    </div>
+
+    <div class="footer">
+      <div class="disclaimer">
+        * BabyPay is for general planning only and does not constitute financial advice.
+        These figures are estimates only and should not be considered accurate data.
+        Please confirm all details with your employer, Centrelink, or Services Australia.
+      </div>
+      <div class="footer-links">
+        <a href="#">Terms & Conditions</a>
+        •
+        <a href="#">Privacy Policy</a>
+      </div>
     </div>
   </div>
 
-  <div class="tax-toggle">
-    <label style="display: flex; align-items: center; justify-content: center; gap: 6px;">
-      <input type="checkbox" id="showAfterTax" />
-      <span>Show After-Tax Estimates</span>
-    </label>
-  </div>
-
-  <button id="calculate">BabyPay</button>
-  <button id="return2">Return to Work - 2 Days</button>
-  <button id="return3">Return to Work - 3 Days</button>
-  <button id="return4">Return to Work - 4 Days</button>
-
-  <!-- New: PDF calendar button (hidden until BabyPay is run) -->
-  <button id="downloadCalendar" style="display:none;">
-    Download Maternity Calendar (PDF)
-  </button>
-
-  <div id="result"></div>
-
-  <div class="sponsor">
-    <a href="https://ko-fi.com/babypay" target="_blank">&#10084; Support BabyPay</a>
-  </div>
-
-  <!-- Recommended Products -->
-  <div class="product-section" style="display:none;">
-    <div class="product-section-title">Recommended by BabyPay (Affiliate)</div>
-    <div class="product-card-list">
-
-      <div class="product-card">
-        <img src="calendar.png" class="product-card-thumb" />
-        <div>
-          <p class="product-card-title">Family Calendar</p>
-          <a href="https://amzn.to/4498EmX" target="_blank" class="product-card-link">View on Amazon</a>
-        </div>
-      </div>
-
-      <div class="product-card">
-        <img src="babyseat.png" class="product-card-thumb" />
-        <div>
-          <p class="product-card-title">Car Seat</p>
-          <a href="https://amzn.to/3LVURJY" target="_blank" class="product-card-link">View on Amazon</a>
-        </div>
-      </div>
-
-      <div class="product-card">
-        <img src="babybassinet.png" class="product-card-thumb" />
-        <div>
-          <p class="product-card-title">Bassinet</p>
-          <a href="https://amzn.to/49Bkuty" target="_blank" class="product-card-link">View on Amazon</a>
-        </div>
-      </div>
-
+  <!-- Tax breakdown modal -->
+  <div id="userTaxModal" class="modal">
+    <div class="modal-content" id="userTaxModalContent">
+      <!-- Content populated by JavaScript -->
     </div>
   </div>
 
-  <p class="disclaimer">
-    * BabyPay is for general planning only and does not constitute financial advice.<br>
-    These figures are estimates only and should not be considered accurate data.<br>
-    Please confirm all details with your employer, Centrelink, or Services Australia.
-  </p>
+  <script>
+// ======================================
+// BabyPay v4.0 - 21 weeks + period selector
+// ======================================
 
-  <!-- Footer: Terms + Privacy -->
-  <div class="footer-links">
-    <a href="terms.html">Terms & Conditions</a> • 
-    <a href="privacy.html">Privacy Policy</a>
-  </div>
+let lastAction = null;
+let lastReturnDays = null;
 
-  <!-- Tax Breakdown Modal -->
-  <div id="userTaxModal">
-    <div id="userTaxModalContent"></div>
-  </div>
+// Format currency based on period
+function formatCurrency(amount, period = 'monthly') {
+  const labels = {
+    'weekly': '/week',
+    'fortnightly': '/fortnight',
+    'monthly': '/month'
+  };
+  return "$" + amount.toLocaleString(undefined, { maximumFractionDigits: 0 }) + labels[period];
+}
 
-  <script src="popup.js"></script>
+// Convert monthly amount to selected period
+function convertToPeriod(monthlyAmount, period) {
+  switch(period) {
+    case 'weekly':
+      return (monthlyAmount * 12) / 52;
+    case 'fortnightly':
+      return (monthlyAmount * 12) / 26;
+    case 'monthly':
+    default:
+      return monthlyAmount;
+  }
+}
+
+// Australian income tax brackets
+function calculateIncomeTax(annualIncome) {
+  if (annualIncome <= 18200) return 0;
+  if (annualIncome <= 45000) return (annualIncome - 18200) * 0.16;
+  if (annualIncome <= 135000) return 4288 + (annualIncome - 45000) * 0.30;
+  if (annualIncome <= 190000) return 31288 + (annualIncome - 135000) * 0.37;
+  return 51688 + (annualIncome - 190000) * 0.45;
+}
+
+// Return gross or net based on checkbox
+function getDisplayIncome(monthlyGross, showAfterTax, period = 'monthly') {
+  let monthlyAmount = monthlyGross;
+  
+  if (showAfterTax) {
+    const annualGross = monthlyGross * 12;
+    const incomeTaxAnnual = calculateIncomeTax(annualGross);
+    const medicareAnnual = annualGross * 0.02;
+    const totalTaxAnnual = incomeTaxAnnual + medicareAnnual;
+    const annualNet = annualGross - totalTaxAnnual;
+    monthlyAmount = annualNet / 12;
+  }
+  
+  return convertToPeriod(monthlyAmount, period);
+}
+
+// Render breakdown cards
+function renderBreakdown(
+  title,
+  nonPrimaryDisplay,
+  primaryDisplay,
+  totalDisplay,
+  note = "",
+  showAfterTax = false,
+  hasInfo = false,
+  nonPrimaryGross = 0,
+  primaryGross = 0,
+  period = 'monthly'
+) {
+  const labelType = showAfterTax ? "Net" : "Gross";
+
+  const makeIcon = (grossAmt, tip) => `
+    <img
+      src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234A90E2'%3E%3Ccircle cx='12' cy='12' r='10' stroke='%234A90E2' stroke-width='2' fill='none'/%3E%3Ctext x='12' y='16' text-anchor='middle' font-size='14' fill='%234A90E2' font-weight='bold'%3Ei%3C/text%3E%3C/svg%3E"
+      alt="Info"
+      title="${tip}"
+      class="info-icon"
+      data-value="${grossAmt}"
+      style="width:14px;height:14px;cursor:pointer;margin-left:4px;vertical-align:middle;"
+    />
+  `;
+
+  return `
+    <div style="border:1px solid #ddd;padding:12px;margin:12px 0;border-radius:4px;text-align:left;background:#fafafa;">
+      <div style="font-weight:bold;margin-bottom:8px;font-size:14px;">${title}</div>
+      <div style="font-size:12px;margin-bottom:4px;">
+        Non-Primary (${labelType}): ${formatCurrency(Math.round(nonPrimaryDisplay), period)}
+        ${hasInfo ? makeIcon(nonPrimaryGross, `${labelType} Non-Primary`) : ""}
+      </div>
+      <div style="font-size:12px;margin-bottom:4px;">
+        Primary (${labelType}): ${formatCurrency(Math.round(primaryDisplay), period)}
+        ${hasInfo ? makeIcon(primaryGross, `${labelType} Primary`) : ""}
+      </div>
+      <div style="font-size:13px;font-weight:bold;margin-bottom:4px;">
+        Total: ${formatCurrency(Math.round(totalDisplay), period)}
+      </div>
+      ${note ? `<div style="font-size:11px;color:#666;margin-top:6px;">${note}</div>` : ""}
+    </div>
+  `;
+}
+
+// Info-icon handler
+function attachInfoListeners() {
+  document.querySelectorAll(".info-icon").forEach(icon => {
+    icon.addEventListener("click", () => {
+      const gross = parseFloat(icon.dataset.value) || 0;
+      const annual = gross * 12;
+
+      const incomeTaxAnnual = calculateIncomeTax(annual);
+      const medicareAnnual = annual * 0.02;
+      const totalTaxAnnual = incomeTaxAnnual + medicareAnnual;
+
+      const incomeTaxMon = incomeTaxAnnual / 12;
+      const medicareMon = medicareAnnual / 12;
+      const totalTaxMon = totalTaxAnnual / 12;
+      const netMon = gross - totalTaxMon;
+
+      const modal = document.getElementById("userTaxModal");
+      const content = document.getElementById("userTaxModalContent");
+
+      if (!modal || !content) return;
+
+      content.innerHTML = `
+        <h3 style="margin:0 0 12px;font-size:16px;">Tax Breakdown (Estimate)</h3>
+        <p style="margin:0;font-size:13px;line-height:1.6;">
+          Gross: ${formatCurrency(Math.round(gross), 'monthly')}<br>
+          Income tax: ${formatCurrency(Math.round(incomeTaxMon), 'monthly')}<br>
+          Medicare (2%): ${formatCurrency(Math.round(medicareMon), 'monthly')}<br>
+          Total tax: ${formatCurrency(Math.round(totalTaxMon), 'monthly')}<br>
+          <strong>Net: ${formatCurrency(Math.round(netMon), 'monthly')}</strong>
+        </p>
+      `;
+      modal.style.display = "flex";
+    });
+  });
+
+  const utm = document.getElementById("userTaxModal");
+  if (utm) {
+    utm.addEventListener("click", e => {
+      if (e.target.id === "userTaxModal") {
+        e.target.style.display = "none";
+      }
+    });
+  }
+}
+
+// Product reveal
+function revealProductSection() {
+  const productSection = document.querySelector(".product-section");
+  if (!productSection) return;
+
+  setTimeout(() => {
+    if (productSection.style.display === "none") {
+      productSection.style.display = "inline-block";
+      requestAnimationFrame(() => {
+        productSection.classList.add("visible");
+      });
+    } else {
+      productSection.classList.add("visible");
+    }
+  }, 3000);
+}
+
+// Main calculators
+function calculateBabyPay() {
+  lastAction = 'babyPay';
+  revealProductSection();
+
+  const userGross = parseFloat(document.getElementById("userIncome").value) || 0;
+  const wifeGross = parseFloat(document.getElementById("wifeIncome").value) || 0;
+  const paidWeeks = parseFloat(document.getElementById("paidWeeks").value) || 0;
+  const showAfter = document.getElementById("showAfterTax").checked;
+  const payRate = document.getElementById("fullPay").checked ? 1 : 0.5;
+  const period = document.querySelector('input[name="period"]:checked')?.value || 'monthly';
+
+  const govGross = 948.10 * 52 / 12;
+  const leaveGross = wifeGross * payRate;
+
+  const displayUser = getDisplayIncome(userGross, showAfter, period);
+  const displayGov = getDisplayIncome(govGross, showAfter, period);
+  const displayLeave = getDisplayIncome(leaveGross, showAfter, period);
+
+  document.getElementById("result").innerHTML =
+    renderBreakdown(
+      "Government Pay (21 weeks)",
+      displayUser,
+      displayGov,
+      displayUser + displayGov,
+      "Government payment rate: $948.10 per week (gross). Non-primary receives 3 weeks.",
+      showAfter,
+      true,
+      userGross,
+      govGross,
+      period
+    ) +
+    renderBreakdown(
+      `Paid Leave (${paidWeeks} weeks)`,
+      displayUser,
+      displayLeave,
+      displayUser + displayLeave,
+      "Non-primary caretaker remains at work; salary is unchanged.",
+      showAfter,
+      true,
+      userGross,
+      leaveGross,
+      period
+    );
+
+  attachInfoListeners();
+}
+
+function calculateReturnWork(days) {
+  lastAction = 'return';
+  lastReturnDays = days;
+
+  revealProductSection();
+
+  const userGross = parseFloat(document.getElementById("userIncome").value) || 0;
+  const wifeMonthly = parseFloat(document.getElementById("wifeIncome").value) || 0;
+  const showAfter = document.getElementById("showAfterTax").checked;
+  const period = document.querySelector('input[name="period"]:checked')?.value || 'monthly';
+  const dayGross = (wifeMonthly * days) / 5;
+
+  const displayUser = getDisplayIncome(userGross, showAfter, period);
+  const displayWife = getDisplayIncome(dayGross, showAfter, period);
+
+  document.getElementById("result").innerHTML =
+    renderBreakdown(
+      `Return to Work (${days} Days/Week)`,
+      displayUser,
+      displayWife,
+      displayUser + displayWife,
+      "(Non-primary caretaker continues full salary.)",
+      showAfter,
+      true,
+      userGross,
+      dayGross,
+      period
+    );
+
+  attachInfoListeners();
+}
+
+// Initialization
+(function init() {
+  document.getElementById("result").innerHTML = "";
+
+  document.getElementById("calculate").addEventListener("click", calculateBabyPay);
+  document.getElementById("return2").addEventListener("click", () => calculateReturnWork(2));
+  document.getElementById("return3").addEventListener("click", () => calculateReturnWork(3));
+  document.getElementById("return4").addEventListener("click", () => calculateReturnWork(4));
+
+  document.getElementById("showAfterTax").addEventListener("change", () => {
+    if (lastAction === 'babyPay') calculateBabyPay();
+    else if (lastAction === 'return') calculateReturnWork(lastReturnDays);
+  });
+
+  document.querySelectorAll('input[name="period"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      if (lastAction === 'babyPay') calculateBabyPay();
+      else if (lastAction === 'return') calculateReturnWork(lastReturnDays);
+    });
+  });
+
+  ['userIncome', 'wifeIncome', 'paidWeeks'].forEach(id => {
+    document.getElementById(id).addEventListener('input', () => {
+      if (lastAction === 'babyPay') calculateBabyPay();
+      else if (lastAction === 'return') calculateReturnWork(lastReturnDays);
+    });
+  });
+
+  ['fullPay', 'halfPay'].forEach(id => {
+    document.getElementById(id).addEventListener('change', () => {
+      if (lastAction === 'babyPay') calculateBabyPay();
+      else if (lastAction === 'return') calculateReturnWork(lastReturnDays);
+    });
+  });
+})();
+  </script>
 </body>
 </html>

@@ -1,366 +1,362 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>BabyPay – Maternity Calendar</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BabyPay – Parental Leave Estimator</title>
   <link rel="icon" href="icon.png" type="image/png" />
 
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-4BB529LTKE"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-4BB529LTKE');
+  </script>
+
   <style>
-    :root {
-      --bg: #0b1020;
-      --card: #0f1426;
-      --muted: #97a0af;
-      --text: #e7e9ed;
-      --accent: #7aa2ff;
-      --line: #1b2033;
-      --good: #a7f3d0;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    html, body {
-      margin: 0;
-      padding: 0;
-      background: var(--bg);
-      color: var(--text);
-      font: 13px/1.4 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
-      min-height: 100%;
-    }
-
     body {
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      min-height: 100vh;
-    }
-
-    @media (min-width: 900px) {
-      body {
-        align-items: center;
-      }
-    }
-
-    .app {
-      width: 100%;
-      max-width: 720px;
-      margin: 40px 20px;
-    }
-
-    @media (min-width: 900px) {
-      .app {
-        margin: 0 auto;
-      }
-    }
-
-    header {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 16px;
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 24px;
+      text-align: center;
+      background-color: #fafafa;
     }
 
     header img {
-      width: 40px;
-      height: 40px;
-      border-radius: 8px;
+      width: 60px;
     }
 
-    header h1 {
-      margin: 0;
-      font-size: 20px;
+    h1 {
+      font-size: 24px;
+      margin: 8px 0 4px 0;
     }
 
-    header p {
-      margin: 2px 0 0;
-      color: var(--muted);
-      font-size: 12px;
+    p.subtitle {
+      font-size: 14px;
+      color: #555;
+      margin-bottom: 24px;
     }
 
-    .card {
-      background: var(--card);
-      border-radius: 12px;
-      padding: 16px 18px 18px;
-      border: 1px solid var(--line);
-      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
-      margin-bottom: 16px;
-    }
-
-    .card h2 {
-      margin: 0 0 12px;
-      font-size: 15px;
-    }
-
-    .field {
+    .input-group {
       display: flex;
-      flex-direction: column;
-      align-items: flex-start;
+      align-items: center;
       margin-bottom: 10px;
     }
 
-    .field span {
-      font-size: 12px;
-      margin-bottom: 4px;
+    .input-group span {
+      padding: 6px;
+      background-color: #eee;
+      border: 1px solid #ccc;
+      border-right: none;
+      border-radius: 4px 0 0 4px;
+      font-weight: bold;
     }
 
-    .field small {
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 3px;
-    }
-
-    .field input[type="date"],
-    .field input[type="number"] {
+    .input-group input {
       width: 100%;
-      padding: 7px 9px;
-      border-radius: 6px;
-      border: 1px solid var(--line);
-      background: #0b1020;
-      color: var(--text);
+      padding: 6px;
+      border: 1px solid #ccc;
+      border-radius: 0 4px 4px 0;
+      border-left: none;
+      box-sizing: border-box;
+    }
+
+    .inline-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .inline-row input[type="number"] {
+      flex: 1;
+      padding: 6px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    .pay-type-options {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .pay-type-options label {
       font-size: 13px;
-      outline: none;
+      display: flex;
+      align-items: center;
+      gap: 4px;
     }
 
-    .field input[type="date"]:focus,
-    .field input[type="number"]:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 1px rgba(122, 162, 255, 0.4);
+    .tax-toggle {
+      font-size: 12px;
+      margin-bottom: 10px;
     }
 
-    .btn-primary {
-      margin-top: 8px;
-      padding: 9px 16px;
-      border-radius: 8px;
+    button {
+      padding: 10px 16px;
+      width: 100%;
+      max-width: 300px;
+      margin: 8px auto;
+      background-color: #2196F3;
+      color: white;
       border: none;
-      background: var(--accent);
-      color: #0b1020;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      display: block;
+    }
+
+    button:hover {
+      background-color: #1976D2;
+    }
+
+    #result {
+      margin-top: 12px;
       font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
+      text-align: left;
     }
 
-    .btn-primary:hover {
-      filter: brightness(1.05);
+    .disclaimer {
+      font-size: 10px;
+      color: gray;
+      margin-top: 16px;
+      line-height: 1.4;
     }
 
-    .btn-secondary {
-      margin-top: 8px;
-      padding: 8px 14px;
+    /* Product Section – FIXED WIDTH ISSUE */
+    .product-section {
+      margin-top: 18px;
+      text-align: left;
+      width: 100%;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+      opacity: 0;
+      transform: translateY(4px);
+      display: none;
+      transition: opacity 1.1s ease 0.25s, transform 1.1s ease 0.25s;
+    }
+
+    .product-section.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .product-section-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #888;
+      margin-bottom: 6px;
+      text-align: left;
+    }
+
+    .product-card-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .product-card {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
       border-radius: 8px;
-      border: 1px solid var(--line);
-      background: #10152a;
-      color: var(--text);
+      background-color: #ffffff;
+      border: 1px solid #e5e5e5;
       font-size: 12px;
+    }
+
+    .product-card-thumb {
+      width: 32px;
+      height: auto;
+      border-radius: 4px;
+      object-fit: contain;
+    }
+
+    .product-card-title {
+      font-weight: bold;
+      font-size: 12px;
+      margin: 0;
+    }
+
+    .product-card-link {
+      font-size: 11.5px;
+      color: #777;
+      text-decoration: none;
+    }
+
+    .product-card-link:hover {
+      color: #1976D2;
+      text-decoration: underline;
+    }
+
+    .sponsor {
+      margin-top: 22px;
+    }
+
+    .sponsor a {
+      display: inline-block;
+      background-color: #F48FB1;
+      color: white;
+      text-decoration: none;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: bold;
+      transition: background-color 0.2s ease;
+    }
+
+    .sponsor a:hover {
+      background-color: #EC407A;
+    }
+
+    /* Info Modal */
+    #userTaxModal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.55);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    #userTaxModalContent {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      width: 280px;
+      text-align: left;
+      font-size: 13px;
+    }
+
+    .info-icon {
       cursor: pointer;
     }
 
-    .btn-secondary:hover {
-      background: #141a31;
-    }
-
-    .hint {
+    /* Footer links */
+    .footer-links {
+      margin-top: 18px;
       font-size: 11px;
-      color: var(--muted);
-      margin-top: 6px;
+      color: #777;
     }
 
-    .result-note {
-      font-size: 12px;
-      color: var(--good);
-      margin-top: 8px;
+    .footer-links a {
+      color: #777;
+      text-decoration: none;
+      margin: 0 6px;
+    }
+
+    .footer-links a:hover {
+      text-decoration: underline;
+      color: #444;
     }
   </style>
 </head>
+
 <body>
-  <div class="app">
-    <header>
-      <!-- Optional logo, replace icon.png or remove img if you like -->
-      <img src="icon.png" alt="BabyPay logo" onerror="this.style.display='none'" />
-      <div>
-        <h1>BabyPay</h1>
-        <p>Maternity leave calendar helper</p>
-      </div>
-    </header>
+  <header>
+    <img src="icon.png" alt="BabyPay Logo" />
+    <h1>BabyPay Estimator</h1>
+    <p class="subtitle">Plan your parental leave income with clarity</p>
+  </header>
 
-    <section class="card">
-      <h2>Maternity leave dates</h2>
-
-      <!-- Leave start date -->
-      <label class="field">
-        <span>Leave start date</span>
-        <input type="date" id="leaveStart" />
-        <small>First day of parental leave for the primary carer.</small>
-      </label>
-
-      <!-- Gov PPL weeks (editable so it matches BabyPay if you want) -->
-      <label class="field">
-        <span>Government Paid Parental Leave (weeks)</span>
-        <input type="number" id="govWeeks" min="0" step="1" value="24" />
-        <small>Default 24 weeks. Adjust if BabyPay is using a different number.</small>
-      </label>
-
-      <!-- Work PPL weeks -->
-      <label class="field">
-        <span>Workplace paid parental leave (weeks)</span>
-        <input type="number" id="workWeeks" min="0" step="1" value="28" />
-        <small>For example: 28 weeks at half pay, or whatever your workplace offers.</small>
-      </label>
-
-      <!-- Download calendar button -->
-      <button id="downloadCalendarBtn" type="button" class="btn-primary">
-        Download maternity calendar (.ics)
-      </button>
-
-      <p class="hint">
-        The downloaded file will create two all-day calendar events:
-        one for Government PPL, and one for Workplace PPL, back-to-back.
-      </p>
-
-      <p id="calendarStatus" class="result-note" style="display:none;"></p>
-    </section>
-
-    <section class="card">
-      <h2>BabyPay calculator (placeholder)</h2>
-      <p class="hint">
-        This demo page only shows the calendar feature.  
-        On your real BabyPay site, you’d keep your full calculator here
-        and just reuse the same date/weeks inputs to generate the calendar.
-      </p>
-    </section>
+  <div class="input-group">
+    <span>$</span>
+    <input id="userIncome" type="number" placeholder="Non Primary Caretaker (Gross Monthly)" />
   </div>
 
-  <script>
-    // ======================================================
-    // Maternity calendar (.ics) download for BabyPay
-    // ======================================================
+  <div class="input-group">
+    <span>$</span>
+    <input id="wifeIncome" type="number" placeholder="Primary Caretaker (Gross Monthly)" />
+  </div>
 
-    const DEFAULT_GOV_WEEKS  = 24;
-    const DEFAULT_WORK_WEEKS = 28;
+  <div class="inline-row">
+    <input id="paidWeeks" type="number" placeholder="Paid Leave Weeks (Primary Caretaker Only)" />
+    <div class="pay-type-options">
+      <label><input type="checkbox" id="fullPay"> Full</label>
+      <label><input type="checkbox" id="halfPay"> Half</label>
+    </div>
+  </div>
 
-    function getGovAndWorkWeeks() {
-      const govWeeksInput  = document.getElementById('govWeeks');
-      const workWeeksInput = document.getElementById('workWeeks');
+  <div class="tax-toggle">
+    <label style="display: flex; align-items: center; justify-content: center; gap: 6px;">
+      <input type="checkbox" id="showAfterTax" />
+      <span>Show After-Tax Estimates</span>
+    </label>
+  </div>
 
-      const govWeeks = govWeeksInput
-        ? Number(govWeeksInput.value) || DEFAULT_GOV_WEEKS
-        : DEFAULT_GOV_WEEKS;
+  <button id="calculate">BabyPay</button>
+  <button id="return2">Return to Work - 2 Days</button>
+  <button id="return3">Return to Work - 3 Days</button>
+  <button id="return4">Return to Work - 4 Days</button>
 
-      const workWeeks = workWeeksInput
-        ? Number(workWeeksInput.value) || DEFAULT_WORK_WEEKS
-        : DEFAULT_WORK_WEEKS;
+  <div id="result"></div>
 
-      return { govWeeks, workWeeks };
-    }
+  <div class="sponsor">
+    <a href="https://ko-fi.com/babypay" target="_blank">&#10084; Support BabyPay</a>
+  </div>
 
-    function createICSCalendar(leaveStartDate, govWeeks, workWeeks) {
-      function fmtDateTimeUTC(date) {
-        return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-      }
+  <!-- Recommended Products -->
+  <div class="product-section" style="display:none;">
+    <div class="product-section-title">Recommended by BabyPay (Affiliate)</div>
+    <div class="product-card-list">
 
-      function fmtDateOnly(date) {
-        return date.toISOString().slice(0, 10).replace(/-/g, '');
-      }
+      <div class="product-card">
+        <img src="calendar.png" class="product-card-thumb" />
+        <div>
+          <p class="product-card-title">Family Calendar</p>
+          <a href="https://amzn.to/4498EmX" target="_blank" class="product-card-link">View on Amazon</a>
+        </div>
+      </div>
 
-      const now = fmtDateTimeUTC(new Date());
+      <div class="product-card">
+        <img src="babyseat.png" class="product-card-thumb" />
+        <div>
+          <p class="product-card-title">Car Seat</p>
+          <a href="https://amzn.to/3LVURJY" target="_blank" class="product-card-link">View on Amazon</a>
+        </div>
+      </div>
 
-      const govStart = new Date(leaveStartDate.getTime());
-      const govEnd   = new Date(govStart.getTime());
-      // DTEND exclusive, so this covers govWeeks*7 days
-      govEnd.setDate(govEnd.getDate() + govWeeks * 7);
+      <div class="product-card">
+        <img src="babybassinet.png" class="product-card-thumb" />
+        <div>
+          <p class="product-card-title">Bassinet</p>
+          <a href="https://amzn.to/49Bkuty" target="_blank" class="product-card-link">View on Amazon</a>
+        </div>
+      </div>
 
-      const workStart = new Date(govEnd.getTime());
-      const workEnd   = new Date(workStart.getTime());
-      workEnd.setDate(workEnd.getDate() + workWeeks * 7);
+    </div>
+  </div>
 
-      const lines = [];
+  <p class="disclaimer">
+    * BabyPay is for general planning only and does not constitute financial advice.<br>
+    These figures are estimates only and should not be considered accurate data.<br>
+    Please confirm all details with your employer, Centrelink, or Services Australia.
+  </p>
 
-      lines.push(
-        'BEGIN:VCALENDAR',
-        'VERSION:2.0',
-        'PRODID:-//BabyPay//Maternity Calendar//EN'
-      );
+  <!-- Footer: Terms + Privacy -->
+  <div class="footer-links">
+    <a href="terms.html">Terms & Conditions</a> • 
+    <a href="privacy.html">Privacy Policy</a>
+  </div>
 
-      // Government PPL block
-      lines.push(
-        'BEGIN:VEVENT',
-        'UID:babypay-gov-' + now,
-        'DTSTAMP:' + now,
-        'DTSTART;VALUE=DATE:' + fmtDateOnly(govStart),
-        'DTEND;VALUE=DATE:' + fmtDateOnly(govEnd),
-        'SUMMARY:Government Paid Parental Leave',
-        'DESCRIPTION:Government Paid Parental Leave calculated via BabyPay.',
-        'END:VEVENT'
-      );
+  <!-- Tax Breakdown Modal -->
+  <div id="userTaxModal">
+    <div id="userTaxModalContent"></div>
+  </div>
 
-      // Workplace PPL block
-      lines.push(
-        'BEGIN:VEVENT',
-        'UID:babypay-work-' + now,
-        'DTSTAMP:' + now,
-        'DTSTART;VALUE=DATE:' + fmtDateOnly(workStart),
-        'DTEND;VALUE=DATE:' + fmtDateOnly(workEnd),
-        'SUMMARY:Workplace Paid Parental Leave',
-        'DESCRIPTION:Workplace Paid Parental Leave calculated via BabyPay.',
-        'END:VEVENT'
-      );
-
-      lines.push('END:VCALENDAR');
-
-      return lines.join('\r\n');
-    }
-
-    function downloadMaternityCalendar() {
-      const statusEl = document.getElementById('calendarStatus');
-      if (statusEl) {
-        statusEl.style.display = 'none';
-      }
-
-      const leaveStartInput = document.getElementById('leaveStart');
-      const leaveStartStr   = leaveStartInput ? leaveStartInput.value : '';
-
-      if (!leaveStartStr) {
-        alert('Please enter a leave start date first.');
-        return;
-      }
-
-      const leaveStartDate = new Date(leaveStartStr + 'T00:00:00');
-      if (isNaN(leaveStartDate.getTime())) {
-        alert('That leave start date looks invalid. Please choose a valid date.');
-        return;
-      }
-
-      const { govWeeks, workWeeks } = getGovAndWorkWeeks();
-
-      const icsText = createICSCalendar(leaveStartDate, govWeeks, workWeeks);
-
-      const blob = new Blob([icsText], {
-        type: 'text/calendar;charset=utf-8'
-      });
-      const url  = URL.createObjectURL(blob);
-
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'babypay-maternity-calendar.ics';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      if (statusEl) {
-        statusEl.textContent =
-          'Calendar downloaded. Import it into Google Calendar, Apple Calendar or Outlook.';
-        statusEl.style.display = 'block';
-      }
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-      const btn = document.getElementById('downloadCalendarBtn');
-      if (btn) {
-        btn.addEventListener('click', downloadMaternityCalendar);
-      }
-    });
-  </script>
+  <script src="popup.js"></script>
 </body>
 </html>

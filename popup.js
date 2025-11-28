@@ -1,29 +1,20 @@
 // ======================================
-// popup.js (BabyPay v4.9 – Medicare levy + PDF logo + weekly column)
+// popup.js (BabyPay v3.9 + Medicare levy)
 // • Renders data on button click or live when inputs change.
 // • Monthly-only tax breakdown in info-modals using original gross values.
-// • “Government Pay (24 weeks)” & “Paid Leave (<n> weeks)” cards.
+// • “Government Pay (21 weeks)” & “Paid Leave (<n> weeks)” cards.
 // • Government Pay card notes the $948.10/week gross rate.
 // • After-tax includes income tax + 2% Medicare levy.
-// • PDF calendar now includes:
-//      - BabyPay logo
-//      - Weekly Amount column (Gov vs Paid weeks)
 // ======================================
 
 let lastAction = null;      // 'babyPay' or 'return'
 let lastReturnDays = null;  // stores days for return-to-work
-let logoDataUrl = null;     // cached BabyPay logo for PDF
 
 // ——— Utility functions ———
 
 // Format a number into “$X,XXX/month”
 function formatCurrency(amount) {
   return "$" + amount.toLocaleString(undefined, { maximumFractionDigits: 0 }) + "/month";
-}
-
-// Format a number into “$X,XXX/week”
-function formatCurrencyWeek(amount) {
-  return "$" + amount.toLocaleString(undefined, { maximumFractionDigits: 0 }) + "/week";
 }
 
 // Australian income tax brackets (annual → income tax only, no Medicare)
@@ -164,162 +155,6 @@ function revealProductSection() {
   }, 3000); // 3 second delay
 }
 
-// ——— Helper functions for dates (PDF calendar) ———
-
-function addDays(date, days) {
-  const d = new Date(date);
-  d.setDate(d.getDate() + days);
-  return d;
-}
-
-function formatDateShort(d) {
-  const day = String(d.getDate()).padStart(2, "0");
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const year = d.getFullYear();
-  return `${day}/${month}/${year}`;
-}
-
-// ——— Preload BabyPay logo for PDF ———
-
-function preloadLogo() {
-  try {
-    const img = new Image();
-    img.src = "icon.png";
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(img, 0, 0);
-      logoDataUrl = canvas.toDataURL("image/png");
-    };
-  } catch (e) {
-    // If anything fails, logo just won't be used – PDF will still generate
-    logoDataUrl = null;
-  }
-}
-
-// ——— PDF calendar generator ———
-
-function generatePDFCalendar(govWeeks, paidWeeks, userGross, wifeGross, showAfterTax) {
-  if (!window.jspdf || !window.jspdf.jsPDF) {
-    alert("PDF library failed to load. Please check your connection and try again.");
-    return;
-  }
-
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-
-  const govWeeksInt  = parseInt(govWeeks || 24, 10) || 24;
-  const paidWeeksInt = Math.max(0, Math.round(paidWeeks || 0));
-
-  const today     = new Date();
-  const govStart  = new Date(today);
-  const govEnd    = addDays(govStart, govWeeksInt * 7 - 1);
-  const paidStart = addDays(govEnd, 1);
-  const paidEnd   = addDays(paidStart, paidWeeksInt * 7 - 1);
-
-  // Monthly figures (net/gross) for income
-  const govMonthlyGross = 948.10 * 52 / 12;
-  const govDisplay      = getDisplayIncome(govMonthlyGross, showAfterTax);
-  const userDisplay     = getDisplayIncome(userGross,     showAfterTax);
-  const wifeDisplay     = getDisplayIncome(wifeGross,     showAfterTax);
-  const labelType       = showAfterTax ? "Net" : "Gross";
-
-  // Weekly combined totals (same each week within a phase)
-  const weeklyGovAmount  = (userDisplay + govDisplay)  * 12 / 52;
-  const weeklyPaidAmount = (userDisplay + wifeDisplay) * 12 / 52;
-
-  // Logo in top-right (if available)
-  if (logoDataUrl) {
-    // x, y, width, height
-    doc.addImage(logoDataUrl, "PNG", 170, 8, 22, 22);
-  }
-
-  // Title and summary
-  doc.setFontSize(18);
-  doc.text("BabyPay – Parental Leave Calendar", 14, 18);
-
-  doc.setFontSize(11);
-  doc.text(`Generated on: ${today.toDateString()}`, 14, 28);
-  doc.text(`Assumed start date for Government Pay: ${today.toDateString()}`, 14, 34);
-
-  doc.setFontSize(12);
-  doc.text(
-    `Government Pay (24 weeks): ${formatDateShort(govStart)} → ${formatDateShort(govEnd)}`,
-    14,
-    46
-  );
-  doc.text(
-    `Paid Leave (${paidWeeksInt} weeks): ${formatDateShort(paidStart)} → ${formatDateShort(paidEnd)}`,
-    14,
-    53
-  );
-
-  doc.text(
-    `Non-Primary (${labelType} monthly): ${formatCurrency(Math.round(userDisplay))}`,
-    14,
-    63
-  );
-  doc.text(
-    `Primary (${labelType} monthly during Paid Leave): ${formatCurrency(Math.round(wifeDisplay))}`,
-    14,
-    70
-  );
-
-  // Build weekly schedule rows
-  const rows = [];
-  for (let i = 0; i < govWeeksInt; i++) {
-    const wStart = addDays(govStart, i * 7);
-    const wEnd   = addDays(wStart, 6);
-    rows.push([
-      String(i + 1),
-      "Government Pay",
-      formatDateShort(wStart),
-      formatDateShort(wEnd),
-      formatCurrencyWeek(Math.round(weeklyGovAmount))
-    ]);
-  }
-
-  for (let j = 0; j < paidWeeksInt; j++) {
-    const index = govWeeksInt + j + 1;
-    const wStart = addDays(paidStart, j * 7);
-    const wEnd   = addDays(wStart, 6);
-    rows.push([
-      String(index),
-      "Paid Leave",
-      formatDateShort(wStart),
-      formatDateShort(wEnd),
-      formatCurrencyWeek(Math.round(weeklyPaidAmount))
-    ]);
-  }
-
-  // Weekly calendar table with blue header + zebra rows
-  doc.autoTable({
-    startY: 80,
-    head: [["Week #", "Type", "Start", "End", "Weekly Amount"]],
-    body: rows,
-    styles: { fontSize: 9, cellPadding: 2 },
-    headStyles: {
-      fillColor: [33, 150, 243],
-      textColor: 255,
-      halign: "center"
-    },
-    alternateRowStyles: {
-      fillColor: [245, 245, 245]
-    },
-    columnStyles: {
-      0: { halign: "center", cellWidth: 15 },  // Week #
-      1: { cellWidth: 35 },                    // Type
-      2: { cellWidth: 30 },                    // Start
-      3: { cellWidth: 30 },                    // End
-      4: { cellWidth: 35 }                     // Weekly Amount
-    }
-  });
-
-  doc.save("BabyPay_Maternity_Calendar.pdf");
-}
-
 // ——— Main calculators ———
 
 function calculateBabyPay() {
@@ -332,7 +167,10 @@ function calculateBabyPay() {
   const showAfter  = document.getElementById("showAfterTax").checked;
   const payRate    = document.getElementById("fullPay").checked ? 1 : 0.5;
 
-  const govGross   = 948.10 * 52 / 12;   // Government PPL monthly gross
+  // Government PPL monthly gross
+  // Previously based on 24 weeks; now scaled down so that it reflects 21 weeks instead.
+  const govGross   = (948.10 * 52 / 12) * (21/24);
+
   const leaveGross = wifeGross * payRate;
 
   const displayUser  = getDisplayIncome(userGross, showAfter);
@@ -341,7 +179,7 @@ function calculateBabyPay() {
 
   document.getElementById("result").innerHTML =
     renderBreakdown(
-      "Government Pay (24 weeks)",
+      "Government Pay (21 weeks)",
       displayUser,
       displayGov,
       displayUser + displayGov,
@@ -364,17 +202,6 @@ function calculateBabyPay() {
     );
 
   attachInfoListeners();
-
-  // Make the PDF button visible and store the latest scenario details
-  const downloadBtn = document.getElementById("downloadCalendar");
-  if (downloadBtn) {
-    downloadBtn.style.display = "block";
-    downloadBtn.dataset.govWeeks      = "24";
-    downloadBtn.dataset.paidWeeks     = isNaN(paidWeeks) ? "0" : String(paidWeeks);
-    downloadBtn.dataset.userGross     = String(userGross);
-    downloadBtn.dataset.wifeGross     = String(leaveGross); // primary income during paid leave
-    downloadBtn.dataset.showAfterTax  = showAfter ? "1" : "0";
-  }
 }
 
 function calculateReturnWork(days) {
@@ -412,8 +239,6 @@ function calculateReturnWork(days) {
 (function init() {
   document.getElementById("result").innerHTML = "";
 
-  preloadLogo(); // prefetch BabyPay logo for the PDF
-
   document.getElementById("calculate").addEventListener("click", calculateBabyPay);
   document.getElementById("return2").addEventListener("click", () => calculateReturnWork(2));
   document.getElementById("return3").addEventListener("click", () => calculateReturnWork(3));
@@ -443,20 +268,6 @@ function calculateReturnWork(days) {
   if (infoModal) {
     infoModal.addEventListener("click", e => {
       if (e.target.id === "infoModal") closeInfoModal();
-    });
-  }
-
-  // Download calendar button handler
-  const downloadBtn = document.getElementById("downloadCalendar");
-  if (downloadBtn) {
-    downloadBtn.addEventListener("click", () => {
-      const govWeeks   = parseInt(downloadBtn.dataset.govWeeks || "24", 10);
-      const paidWeeks  = parseFloat(downloadBtn.dataset.paidWeeks || "0");
-      const userGross  = parseFloat(downloadBtn.dataset.userGross || "0");
-      const wifeGross  = parseFloat(downloadBtn.dataset.wifeGross || "0");
-      const showAfter  = downloadBtn.dataset.showAfterTax === "1";
-
-      generatePDFCalendar(govWeeks, paidWeeks, userGross, wifeGross, showAfter);
     });
   }
 })();

@@ -116,8 +116,27 @@
       background-color: #1976D2;
     }
 
+    /* New: pay frequency toggle */
+    .pay-frequency-toggle {
+      margin-top: 8px;
+      margin-bottom: 4px;
+      font-size: 12px;
+      text-align: left;
+    }
+
+    .pay-frequency-toggle label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .pay-frequency-toggle select {
+      padding: 2px 4px;
+      font-size: 12px;
+    }
+
     #result {
-      margin-top: 12px;
+      margin-top: 8px;
       font-size: 13px;
       text-align: left;
     }
@@ -301,6 +320,18 @@
   <button id="return2">Return to Work - 2 Days</button>
   <button id="return3">Return to Work - 3 Days</button>
   <button id="return4">Return to Work - 4 Days</button>
+
+  <!-- New: pay frequency toggle for results -->
+  <div class="pay-frequency-toggle">
+    <label for="payFrequency">
+      Show pay as:
+      <select id="payFrequency">
+        <option value="monthly">Monthly</option>
+        <option value="fortnightly">Fortnightly</option>
+        <option value="weekly">Weekly</option>
+      </select>
+    </label>
+  </div>
 
   <div id="result"></div>
 

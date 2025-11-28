@@ -15,6 +15,10 @@
     gtag('config', 'G-4BB529LTKE');
   </script>
 
+  <!-- jsPDF + AutoTable for PDF calendar generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -114,6 +118,15 @@
 
     button:hover {
       background-color: #1976D2;
+    }
+
+    /* Special styling for the PDF download button */
+    #downloadCalendar {
+      background-color: #4CAF50;
+    }
+
+    #downloadCalendar:hover {
+      background-color: #388E3C;
     }
 
     #result {
@@ -301,6 +314,11 @@
   <button id="return2">Return to Work - 2 Days</button>
   <button id="return3">Return to Work - 3 Days</button>
   <button id="return4">Return to Work - 4 Days</button>
+
+  <!-- New: PDF calendar button (hidden until BabyPay is run) -->
+  <button id="downloadCalendar" style="display:none;">
+    Download Maternity Calendar (PDF)
+  </button>
 
   <div id="result"></div>
 

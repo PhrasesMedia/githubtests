@@ -1,42 +1,125 @@
 // calendar-pdf.js
-// Generate a multi-month income calendar and open a print dialog so the user can save as PDF.
+// BabyPay Income Calendar
+// - Uses REAL inputs from popup.js UI
+// - Models government leave (21 weeks) + employer paid leave (paidWeeks)
+// - Non-primary caretaker continues full salary during the whole leave period
+// - Uses GROSS amounts in the calendar (ignores after-tax toggle for now)
+// - Calendar runs from the start of leave to the end of gov + paid leave
+// - One or more month-grids, with BabyPay logo at the top
 
 (function () {
   const btn = document.getElementById("downloadCalendarBtn");
   if (!btn) return;
 
   btn.addEventListener("click", () => {
-    // TODO: Replace this with real BabyPay data once we wire it up.
-    const incomeEntries = getExampleIncomeData();
+    const incomeEntries = buildIncomeTimelineFromInputs();
 
-    if (!incomeEntries.length) {
-      alert("No income data available yet.");
+    if (!incomeEntries || !incomeEntries.length) {
+      alert("Please enter your incomes and leave details before generating the calendar.");
       return;
     }
 
     openIncomeCalendarWindow(incomeEntries);
   });
 
-  // ---- Demo data for now (covers multiple months so you can see it working) ----
-  function getExampleIncomeData() {
-    // Example: income over three months
-    return [
-      { date: "2026-01-02", amount: 3200 },
-      { date: "2026-01-16", amount: 3200 },
-      { date: "2026-01-23", amount: 948.10 },
-      { date: "2026-02-06", amount: 3200 },
-      { date: "2026-02-20", amount: 3200 },
-      { date: "2026-03-06", amount: 3200 },
-    ];
+  // -----------------------------
+  // 1. Build income timeline
+  // -----------------------------
+
+  function buildIncomeTimelineFromInputs() {
+    const userGrossMonthly =
+      parseFloat(document.getElementById("userIncome")?.value) || 0;
+    const wifeGrossMonthly =
+      parseFloat(document.getElementById("wifeIncome")?.value) || 0;
+    const paidWeeks =
+      parseFloat(document.getElementById("paidWeeks")?.value) || 0;
+    const fullPayChecked = document.getElementById("fullPay")?.checked;
+    const halfPayChecked = document.getElementById("halfPay")?.checked;
+
+    // Need at least basic inputs
+    if (!userGrossMonthly && !wifeGrossMonthly) return [];
+    if (!paidWeeks && !wifeGrossMonthly) {
+      // No employer leave and no wife salary → nothing useful beyond gov leave
+      // but we can still show gov + non-primary if we want.
+    }
+
+    // Pay rate for employer paid leave (primary caretaker)
+    let payRate = 0.5;
+    if (fullPayChecked) payRate = 1;
+    if (halfPayChecked && !fullPayChecked) payRate = 0.5;
+
+    // Convert monthly gross → weekly gross (approx)
+    const userWeeklyGross = (userGrossMonthly * 12) / 52;
+    const wifeLeaveWeeklyGross = (wifeGrossMonthly * payRate * 12) / 52;
+
+    // Government Paid Parental Leave (weekly gross already)
+    const govWeeklyGross = 948.10;
+
+    // Periods (in weeks)
+    const GOV_WEEKS = 21; // matches label in BabyPay
+    const employerWeeks = Math.max(0, paidWeeks || 0);
+
+    const totalWeeks = GOV_WEEKS + employerWeeks;
+    if (totalWeeks <= 0) return [];
+
+    // Choose a default start date: first day of NEXT month from today
+    const leaveStartDate = getDefaultLeaveStartDate();
+
+    // Build daily timeline: one entry per day with summed gross
+    const entries = [];
+    const totalDays = totalWeeks * 7;
+
+    for (let i = 0; i < totalDays; i++) {
+      const date = new Date(leaveStartDate);
+      date.setDate(leaveStartDate.getDate() + i);
+
+      let amount = 0;
+
+      // Non-primary caretaker full salary across entire leave period
+      if (userWeeklyGross > 0) {
+        amount += userWeeklyGross / 7;
+      }
+
+      // Government PPL: first GOV_WEEKS weeks only
+      if (i < GOV_WEEKS * 7) {
+        amount += govWeeklyGross / 7;
+      }
+
+      // Employer paid leave: AFTER gov leave, for employerWeeks
+      const employerStartDay = GOV_WEEKS * 7;
+      const employerEndDay = (GOV_WEEKS + employerWeeks) * 7;
+      if (i >= employerStartDay && i < employerEndDay && wifeLeaveWeeklyGross > 0) {
+        amount += wifeLeaveWeeklyGross / 7;
+      }
+
+      entries.push({
+        date: formatYyyyMmDd(
+          date.getFullYear(),
+          date.getMonth() + 1,
+          date.getDate()
+        ),
+        amount,
+      });
+    }
+
+    return entries;
   }
 
-  // ---- Core logic ----
+  function getDefaultLeaveStartDate() {
+    const today = new Date();
+    // First day of next month
+    return new Date(today.getFullYear(), today.getMonth() + 1, 1);
+  }
+
+  // -----------------------------
+  // 2. Multi-month calendar core
+  // -----------------------------
 
   function openIncomeCalendarWindow(incomeEntries) {
     const { minDate, maxDate } = getMinMaxDates(incomeEntries);
     const incomeByDay = groupIncomeByDay(incomeEntries);
-
     const baseHref = getBaseHref();
+
     const html = buildMultiMonthCalendarHtml(minDate, maxDate, incomeByDay, baseHref);
 
     const win = window.open("", "_blank");
@@ -51,7 +134,7 @@
 
     win.focus();
     setTimeout(() => {
-      win.print(); // user can choose "Save as PDF"
+      win.print(); // User can choose "Save as PDF"
     }, 300);
   }
 
@@ -81,11 +164,9 @@
   function getBaseHref() {
     // Use the current page URL as a base so relative paths like "icon.png" work in the new window.
     let href = window.location.href;
-    // Strip query/hash
-    href = href.replace(/[#?].*$/, "");
-    // If it ends with a file name (no trailing slash), drop everything after the last "/"
+    href = href.replace(/[#?].*$/, ""); // strip query/hash
     if (!href.endsWith("/")) {
-      href = href.replace(/[^\/]*$/, "");
+      href = href.replace(/[^\/]*$/, ""); // drop file name
     }
     return href;
   }
@@ -111,7 +192,10 @@
       }
     }
 
-    const totalIncome = Object.values(incomeByDay).reduce((sum, v) => sum + v, 0);
+    const totalIncome = Object.values(incomeByDay).reduce(
+      (sum, v) => sum + v,
+      0
+    );
     const totalIncomeStr = totalIncome.toFixed(2);
 
     return `
@@ -225,19 +309,19 @@
     <img src="icon.png" alt="BabyPay logo" />
     <div class="header-text">
       <h1>BabyPay Income Calendar</h1>
-      <div class="subtitle">Estimated income across your leave period</div>
+      <div class="subtitle">Estimated income across your government + paid leave period</div>
     </div>
   </div>
 
   <div class="summary-banner">
-    Total estimated income across this period: <strong>$${totalIncomeStr}</strong>
+    Total estimated income across this period: <strong>$${totalIncomeStr}</strong> (gross)
   </div>
 
   ${sections.join("")}
 
   <div class="footer-note">
     BabyPay is for planning only. Actual payment dates and amounts may differ;
-    please confirm with your employer and Services Australia.
+    please confirm with your employer, your payslips, and Services Australia.
   </div>
 </body>
 </html>

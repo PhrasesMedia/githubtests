@@ -5,35 +5,43 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>BabyPay – Parental Leave Estimator</title>
   <link rel="icon" href="icon.png" type="image/png" />
+
+  <!-- (Optional) Google Analytics – keep or remove as you wish -->
+  <!--
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-4BB529LTKE"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-4BB529LTKE');
+  </script>
+  -->
+
   <style>
     body {
       font-family: Arial, sans-serif;
-      max-width: 900px;
+      max-width: 600px;
       margin: 40px auto;
       padding: 24px;
-      background-color: #fafafa;
-    }
-
-    header {
       text-align: center;
-      margin-bottom: 24px;
+      background-color: #fafafa;
     }
 
     header img {
       width: 60px;
       display: block;
-      margin: 0 auto 4px;
+      margin: 0 auto 8px auto;
     }
 
     h1 {
       font-size: 24px;
-      margin: 4px 0;
+      margin: 8px 0 4px 0;
     }
 
     p.subtitle {
       font-size: 14px;
       color: #555;
-      margin: 0;
+      margin-bottom: 24px;
     }
 
     .input-group {
@@ -79,10 +87,10 @@
       display: flex;
       gap: 8px;
       justify-content: center;
+      font-size: 13px;
     }
 
     .pay-type-options label {
-      font-size: 13px;
       display: flex;
       align-items: center;
       gap: 4px;
@@ -93,7 +101,6 @@
       margin-bottom: 10px;
     }
 
-    /* shared row for after-tax + frequency */
     .tax-toggle-row {
       display: flex;
       justify-content: center;
@@ -128,20 +135,20 @@
       display: block;
     }
 
-    button.secondary {
-      background-color: #4CAF50;
-    }
-
     button:hover {
       background-color: #1976D2;
     }
 
-    button.secondary:hover {
-      background-color: #3a8b40;
+    /* Special styling for green calendar button */
+    #downloadCalendarBtn {
+      background-color: #2e7d32;
+    }
+    #downloadCalendarBtn:hover {
+      background-color: #1b5e20;
     }
 
     #result {
-      margin-top: 8px;
+      margin-top: 12px;
       font-size: 13px;
       text-align: left;
     }
@@ -238,7 +245,6 @@
 
     .sponsor {
       margin-top: 22px;
-      text-align: center;
     }
 
     .sponsor a {
@@ -257,7 +263,7 @@
       background-color: #EC407A;
     }
 
-    /* Info Modal */
+    /* Info Modal for tax breakdown */
     #userTaxModal {
       position: fixed;
       top: 0;
@@ -284,12 +290,10 @@
       cursor: pointer;
     }
 
-    /* Footer links */
     .footer-links {
       margin-top: 18px;
       font-size: 11px;
       color: #777;
-      text-align: center;
     }
 
     .footer-links a {
@@ -312,6 +316,7 @@
     <p class="subtitle">Plan your parental leave income with clarity</p>
   </header>
 
+  <!-- Income inputs -->
   <div class="input-group">
     <span>$</span>
     <input id="userIncome" type="number" placeholder="Non Primary Caretaker (Gross Monthly)" />
@@ -349,23 +354,23 @@
     </div>
   </div>
 
+  <!-- Action buttons -->
   <button id="calculate">BabyPay</button>
   <button id="return2">Return to Work - 2 Days</button>
   <button id="return3">Return to Work - 3 Days</button>
   <button id="return4">Return to Work - 4 Days ⭐</button>
 
-  <!-- NEW: income calendar button -->
-  <button id="downloadCalendar" class="secondary">
-    Download income calendar (PDF)
-  </button>
+  <!-- NEW: download calendar button -->
+  <button id="downloadCalendarBtn">Download income calendar (PDF)</button>
 
+  <!-- Results area -->
   <div id="result"></div>
 
+  <!-- Support + affiliate section -->
   <div class="sponsor">
     <a href="https://ko-fi.com/babypay" target="_blank">&#10084; Support BabyPay</a>
   </div>
 
-  <!-- Recommended Products -->
   <div class="product-section" style="display:none;">
     <div class="product-section-title">Recommended by BabyPay (Affiliate)</div>
     <div class="product-card-list">
@@ -406,9 +411,9 @@
     Please confirm all details with your employer, Centrelink, or Services Australia.
   </p>
 
-  <!-- Footer: Terms + Privacy (if you have these pages) -->
+  <!-- Footer: Terms + Privacy if you have them -->
   <div class="footer-links">
-    <a href="terms.html">Terms & Conditions</a> • 
+    <a href="terms.html">Terms &amp; Conditions</a> •
     <a href="privacy.html">Privacy Policy</a>
   </div>
 
@@ -417,9 +422,9 @@
     <div id="userTaxModalContent"></div>
   </div>
 
-  <!-- Your existing BabyPay logic -->
+  <!-- Scripts -->
   <script src="popup.js"></script>
-  <!-- NEW: calendar generator -->
+  <!-- Make sure calendar.js (or whatever you named it) is in the same folder -->
   <script src="calendar.js"></script>
 </body>
 </html>

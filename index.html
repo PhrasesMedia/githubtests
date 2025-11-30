@@ -5,39 +5,35 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>BabyPay – Parental Leave Estimator</title>
   <link rel="icon" href="icon.png" type="image/png" />
-
-  <!-- Google Analytics -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-4BB529LTKE"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-4BB529LTKE');
-  </script>
-
   <style>
     body {
       font-family: Arial, sans-serif;
-      max-width: 600px;
+      max-width: 900px;
       margin: 40px auto;
       padding: 24px;
-      text-align: center;
       background-color: #fafafa;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 24px;
     }
 
     header img {
       width: 60px;
+      display: block;
+      margin: 0 auto 4px;
     }
 
     h1 {
       font-size: 24px;
-      margin: 8px 0 4px 0;
+      margin: 4px 0;
     }
 
     p.subtitle {
       font-size: 14px;
       color: #555;
-      margin-bottom: 24px;
+      margin: 0;
     }
 
     .input-group {
@@ -97,7 +93,7 @@
       margin-bottom: 10px;
     }
 
-    /* New: shared row for after-tax + frequency */
+    /* shared row for after-tax + frequency */
     .tax-toggle-row {
       display: flex;
       justify-content: center;
@@ -120,8 +116,8 @@
     button {
       padding: 10px 16px;
       width: 100%;
-      max-width: 300px;
-      margin: 8px auto;
+      max-width: 320px;
+      margin: 6px auto;
       background-color: #2196F3;
       color: white;
       border: none;
@@ -132,8 +128,16 @@
       display: block;
     }
 
+    button.secondary {
+      background-color: #4CAF50;
+    }
+
     button:hover {
       background-color: #1976D2;
+    }
+
+    button.secondary:hover {
+      background-color: #3a8b40;
     }
 
     #result {
@@ -234,6 +238,7 @@
 
     .sponsor {
       margin-top: 22px;
+      text-align: center;
     }
 
     .sponsor a {
@@ -284,6 +289,7 @@
       margin-top: 18px;
       font-size: 11px;
       color: #777;
+      text-align: center;
     }
 
     .footer-links a {
@@ -295,25 +301,6 @@
     .footer-links a:hover {
       text-decoration: underline;
       color: #444;
-    }
-
-    /* NEW: Download calendar button */
-    #downloadCalendarBtn {
-      margin-top: 10px;
-      padding: 8px 14px;
-      width: 100%;
-      max-width: 300px;
-      border-radius: 6px;
-      border: 1px solid #2196F3;
-      background: #fff;
-      color: #2196F3;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-
-    #downloadCalendarBtn:hover {
-      background: #e3f2fd;
     }
   </style>
 </head>
@@ -365,14 +352,14 @@
   <button id="calculate">BabyPay</button>
   <button id="return2">Return to Work - 2 Days</button>
   <button id="return3">Return to Work - 3 Days</button>
-  <button id="return4">Return to Work - 4 Days</button>
+  <button id="return4">Return to Work - 4 Days ⭐</button>
 
-  <div id="result"></div>
-
-  <!-- NEW: Download income calendar button -->
-  <button id="downloadCalendarBtn">
+  <!-- NEW: income calendar button -->
+  <button id="downloadCalendar" class="secondary">
     Download income calendar (PDF)
   </button>
+
+  <div id="result"></div>
 
   <div class="sponsor">
     <a href="https://ko-fi.com/babypay" target="_blank">&#10084; Support BabyPay</a>
@@ -419,7 +406,7 @@
     Please confirm all details with your employer, Centrelink, or Services Australia.
   </p>
 
-  <!-- Footer: Terms + Privacy -->
+  <!-- Footer: Terms + Privacy (if you have these pages) -->
   <div class="footer-links">
     <a href="terms.html">Terms & Conditions</a> • 
     <a href="privacy.html">Privacy Policy</a>
@@ -432,8 +419,7 @@
 
   <!-- Your existing BabyPay logic -->
   <script src="popup.js"></script>
-
-  <!-- NEW: Income calendar generator -->
-  <script src="calendar-pdf.js"></script>
+  <!-- NEW: calendar generator -->
+  <script src="calendar.js"></script>
 </body>
 </html>

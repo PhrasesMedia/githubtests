@@ -1,443 +1,375 @@
-// calendar-pdf.js
-// BabyPay Income Calendar
-// - Uses REAL inputs from popup.js UI
-// - Models government leave (21 weeks) + employer paid leave (paidWeeks)
-// - Non-primary caretaker continues full salary during the whole leave period
-// - Uses GROSS amounts in the calendar (ignores after-tax toggle for now)
-// - Calendar runs from the start of leave to the end of gov + paid leave
-// - One or more month-grids, with BabyPay logo at the top
-// - Asks for an "expected pay date" (day-of-month) and highlights it as Pay day
+// calendar.js
+// Generates a BabyPay income calendar with pay-day deposits and logo
 
-(function () {
-  const btn = document.getElementById("downloadCalendarBtn");
-  if (!btn) return;
+// Helper: format date as YYYY-MM-DD
+function formatYyyyMmDd(year, monthIndex1Based, day) {
+  const m = String(monthIndex1Based).padStart(2, "0");
+  const d = String(day).padStart(2, "0");
+  return `${year}-${m}-${d}`;
+}
 
-  btn.addEventListener("click", () => {
-    const incomeEntries = buildIncomeTimelineFromInputs();
+// Build HTML for a single month block
+function buildSingleMonthSection(year, monthIndex0, incomeByDay, payDay) {
+  const firstOfMonth = new Date(year, monthIndex0, 1);
+  const daysInMonth = new Date(year, monthIndex0 + 1, 0).getDate();
+  const monthName = firstOfMonth.toLocaleString("en-AU", { month: "long" });
 
-    if (!incomeEntries || !incomeEntries.length) {
-      alert("Please enter your incomes and leave details before generating the calendar.");
-      return;
+  // Start the calendar on Monday (0 = Monday)
+  const firstWeekday = (firstOfMonth.getDay() + 6) % 7;
+
+  // 1) Work out the total income for this month
+  let monthTotal = 0;
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateStr = formatYyyyMmDd(year, monthIndex0 + 1, day);
+    monthTotal += incomeByDay[dateStr] || 0;
+  }
+
+  const cells = [];
+
+  // Empty cells before the 1st
+  for (let i = 0; i < firstWeekday; i++) {
+    cells.push({ empty: true });
+  }
+
+  // 2) One cell per day
+  for (let day = 1; day <= daysInMonth; day++) {
+    const isPayDay = payDay && day === payDay;
+
+    // If payDay is set, put full monthTotal on that day; others get 0.
+    // If no payDay, just show daily accruals.
+    let amount = 0;
+    if (payDay) {
+      amount = isPayDay ? monthTotal : 0;
+    } else {
+      const dateStr = formatYyyyMmDd(year, monthIndex0 + 1, day);
+      amount = incomeByDay[dateStr] || 0;
     }
 
-    // Ask for expected pay date (day-of-month, e.g. 14)
-    let payDay = null;
-    const input = prompt(
-      "What day of the month is your main pay date? (1–31)",
-      "14"
-    );
-    if (input !== null && input.trim() !== "") {
-      const n = parseInt(input.trim(), 10);
-      if (!isNaN(n) && n >= 1 && n <= 31) {
-        payDay = n;
-      }
-    }
-    // If user cancels or types something invalid, we just skip highlighting.
+    cells.push({ day, amount, isPayDay });
+  }
 
-    openIncomeCalendarWindow(incomeEntries, payDay);
+  // Turn flat cells into rows of 7
+  const rowsHtml = [];
+  for (let i = 0; i < cells.length; i += 7) {
+    const rowCells = cells.slice(i, i + 7);
+    const tdHtml = rowCells
+      .map((c) => {
+        if (c.empty) {
+          return `<td class="empty"></td>`;
+        }
+        const displayAmount =
+          c.amount > 0
+            ? `$${c.amount.toFixed(2)}`
+            : `<span class="no-pay">–</span>`;
+
+        const paydayClass = c.isPayDay ? " payday" : "";
+        const paydayLabel = c.isPayDay
+          ? `<div class="payday-label">
+               <img src="icon.png" alt="BabyPay logo" class="payday-logo" />
+               Pay day
+             </div>`
+          : "";
+
+        return `
+          <td class="${paydayClass}">
+            <div class="day-number">${c.day}</div>
+            <div class="day-amount">${displayAmount}</div>
+            ${paydayLabel}
+          </td>
+        `;
+      })
+      .join("");
+    rowsHtml.push(`<tr>${tdHtml}</tr>`);
+  }
+
+  return `
+    <div class="month-block">
+      <div class="month-title">${monthName} ${year}</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Mon</th>
+            <th>Tue</th>
+            <th>Wed</th>
+            <th>Thu</th>
+            <th>Fri</th>
+            <th>Sat</th>
+            <th>Sun</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml.join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+// Build full document HTML
+function buildCalendarDocument({
+  incomeByDay,
+  totalIncome,
+  payDay,
+  startDate,
+  endDate
+}) {
+  // Collect unique (year, monthIndex) pairs between start and end
+  const months = [];
+  const cursor = new Date(startDate.getTime());
+  cursor.setDate(1);
+
+  while (cursor <= endDate) {
+    months.push({ year: cursor.getFullYear(), monthIndex0: cursor.getMonth() });
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+
+  const monthBlocks = months
+    .map((m) =>
+      buildSingleMonthSection(m.year, m.monthIndex0, incomeByDay, payDay)
+    )
+    .join("");
+
+  const startLabel = startDate.toLocaleDateString("en-AU", {
+    day: "numeric",
+    month: "long",
+    year: "numeric"
+  });
+  const endLabel = endDate.toLocaleDateString("en-AU", {
+    day: "numeric",
+    month: "long",
+    year: "numeric"
   });
 
-  // -----------------------------
-  // 1. Build income timeline
-  // -----------------------------
-
-  function buildIncomeTimelineFromInputs() {
-    const userGrossMonthly =
-      parseFloat(document.getElementById("userIncome")?.value) || 0;
-    const wifeGrossMonthly =
-      parseFloat(document.getElementById("wifeIncome")?.value) || 0;
-    const paidWeeks =
-      parseFloat(document.getElementById("paidWeeks")?.value) || 0;
-    const fullPayChecked = document.getElementById("fullPay")?.checked;
-    const halfPayChecked = document.getElementById("halfPay")?.checked;
-
-    // Need at least basic inputs
-    if (!userGrossMonthly && !wifeGrossMonthly) return [];
-
-    // Pay rate for employer paid leave (primary caretaker)
-    let payRate = 0.5;
-    if (fullPayChecked) payRate = 1;
-    if (halfPayChecked && !fullPayChecked) payRate = 0.5;
-
-    // Convert monthly gross → weekly gross (approx)
-    const userWeeklyGross = (userGrossMonthly * 12) / 52;
-    const wifeLeaveWeeklyGross = (wifeGrossMonthly * payRate * 12) / 52;
-
-    // Government Paid Parental Leave (weekly gross already)
-    const govWeeklyGross = 948.10;
-
-    // Periods (in weeks)
-    const GOV_WEEKS = 21; // matches label in BabyPay
-    const employerWeeks = Math.max(0, paidWeeks || 0);
-
-    const totalWeeks = GOV_WEEKS + employerWeeks;
-    if (totalWeeks <= 0) return [];
-
-    // Default start date: first day of NEXT month from today
-    const leaveStartDate = getDefaultLeaveStartDate();
-
-    // Build daily timeline: one entry per day with summed gross
-    const entries = [];
-    const totalDays = totalWeeks * 7;
-
-    for (let i = 0; i < totalDays; i++) {
-      const date = new Date(leaveStartDate);
-      date.setDate(leaveStartDate.getDate() + i);
-
-      let amount = 0;
-
-      // Non-primary caretaker full salary across entire leave period
-      if (userWeeklyGross > 0) {
-        amount += userWeeklyGross / 7;
-      }
-
-      // Government PPL: first GOV_WEEKS weeks only
-      if (i < GOV_WEEKS * 7) {
-        amount += govWeeklyGross / 7;
-      }
-
-      // Employer paid leave: AFTER gov leave, for employerWeeks
-      const employerStartDay = GOV_WEEKS * 7;
-      const employerEndDay = (GOV_WEEKS + employerWeeks) * 7;
-      if (i >= employerStartDay && i < employerEndDay && wifeLeaveWeeklyGross > 0) {
-        amount += wifeLeaveWeeklyGross / 7;
-      }
-
-      entries.push({
-        date: formatYyyyMmDd(
-          date.getFullYear(),
-          date.getMonth() + 1,
-          date.getDate()
-        ),
-        amount,
-      });
-    }
-
-    return entries;
-  }
-
-  function getDefaultLeaveStartDate() {
-    const today = new Date();
-    // First day of next month
-    return new Date(today.getFullYear(), today.getMonth() + 1, 1);
-  }
-
-  // -----------------------------
-  // 2. Multi-month calendar core
-  // -----------------------------
-
-  function openIncomeCalendarWindow(incomeEntries, payDay) {
-    const { minDate, maxDate } = getMinMaxDates(incomeEntries);
-    const incomeByDay = groupIncomeByDay(incomeEntries);
-    const baseHref = getBaseHref();
-
-    const html = buildMultiMonthCalendarHtml(
-      minDate,
-      maxDate,
-      incomeByDay,
-      baseHref,
-      payDay
-    );
-
-    const win = window.open("", "_blank");
-    if (!win) {
-      alert("Pop-up blocked. Please allow pop-ups to generate the calendar.");
-      return;
-    }
-
-    win.document.open();
-    win.document.write(html);
-    win.document.close();
-
-    win.focus();
-    setTimeout(() => {
-      win.print(); // User can choose "Save as PDF"
-    }, 300);
-  }
-
-  function getMinMaxDates(entries) {
-    let minDate = null;
-    let maxDate = null;
-
-    entries.forEach((e) => {
-      const d = new Date(e.date);
-      if (!minDate || d < minDate) minDate = d;
-      if (!maxDate || d > maxDate) maxDate = d;
-    });
-
-    return { minDate, maxDate };
-  }
-
-  function groupIncomeByDay(entries) {
-    const map = {}; // key: yyyy-mm-dd, value: total amount
-    entries.forEach((e) => {
-      const key = e.date; // expecting yyyy-mm-dd
-      if (!map[key]) map[key] = 0;
-      map[key] += Number(e.amount) || 0;
-    });
-    return map;
-  }
-
-  function getBaseHref() {
-    // Use the current page URL as a base so relative paths like "icon.png" work in the new window.
-    let href = window.location.href;
-    href = href.replace(/[#?].*$/, ""); // strip query/hash
-    if (!href.endsWith("/")) {
-      href = href.replace(/[^\/]*$/, ""); // drop file name
-    }
-    return href;
-  }
-
-  function buildMultiMonthCalendarHtml(minDate, maxDate, incomeByDay, baseHref, payDay) {
-    const startYear = minDate.getFullYear();
-    const startMonth = minDate.getMonth(); // 0–11
-    const endYear = maxDate.getFullYear();
-    const endMonth = maxDate.getMonth();
-
-    const sections = [];
-    let y = startYear;
-    let m = startMonth;
-
-    while (y < endYear || (y === endYear && m <= endMonth)) {
-      const sectionHtml = buildSingleMonthSection(y, m, incomeByDay, payDay);
-      sections.push(sectionHtml);
-
-      m++;
-      if (m > 11) {
-        m = 0;
-        y++;
-      }
-    }
-
-    const totalIncome = Object.values(incomeByDay).reduce(
-      (sum, v) => sum + v,
-      0
-    );
-    const totalIncomeStr = totalIncome.toFixed(2);
-
-    return `
+  return `
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8" />
   <title>BabyPay Income Calendar</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <base href="${baseHref}">
   <style>
-    * { box-sizing: border-box; }
-
     body {
       font-family: Arial, sans-serif;
-      margin: 20px;
+      margin: 24px;
       color: #222;
     }
-
-    .header {
+    header {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
       margin-bottom: 8px;
     }
-
-    .header img {
+    header img {
+      width: 40px;
       height: 40px;
-      width: auto;
     }
-
-    .header-text h1 {
-      font-size: 22px;
+    header h1 {
       margin: 0;
+      font-size: 22px;
     }
-
-    .header-text .subtitle {
-      font-size: 13px;
-      margin-top: 2px;
+    header .tagline {
+      font-size: 12px;
       color: #555;
     }
-
-    .summary-banner {
-      font-size: 13px;
-      margin: 10px 0 18px 0;
+    .summary {
+      font-size: 12px;
+      margin-bottom: 16px;
     }
-
-    .month-block {
-      page-break-inside: avoid;
-      margin-bottom: 24px;
-    }
-
-    .month-title {
-      font-size: 16px;
+    .summary strong {
       font-weight: bold;
-      margin: 8px 0;
     }
-
+    .month-block {
+      margin-bottom: 24px;
+      page-break-inside: avoid;
+    }
+    .month-title {
+      font-weight: bold;
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
     table {
-      border-collapse: collapse;
       width: 100%;
+      border-collapse: collapse;
       table-layout: fixed;
+      font-size: 11px;
     }
-
     th, td {
-      border: 1px solid #ccc;
+      border: 1px solid #ddd;
       padding: 4px;
       vertical-align: top;
-      height: 70px;
+      height: 48px;
     }
-
     th {
-      background: #f3f3f3;
-      font-size: 12px;
-    }
-
-    td {
-      font-size: 11px;
-      position: relative;
-    }
-
-    .day-number {
+      background: #f5f5f5;
+      text-align: center;
       font-weight: bold;
-      margin-bottom: 4px;
     }
-
-    .day-amount {
-      font-size: 11px;
-    }
-
-    .no-pay {
-      opacity: 0.5;
-    }
-
     td.empty {
       background: #fafafa;
     }
-
-    /* Pay day highlight */
-    td.payday {
-      background: #fff9c4;
+    .day-number {
+      font-weight: bold;
+      margin-bottom: 2px;
     }
-
+    .day-amount {
+      font-size: 11px;
+    }
+    .no-pay {
+      color: #aaa;
+    }
+    .payday {
+      background: #fff9d7;
+    }
     .payday-label {
-      font-size: 9px;
-      color: #c49000;
       margin-top: 3px;
-    }
-
-    .footer-note {
-      margin-top: 16px;
       font-size: 10px;
-      color: #777;
+      color: #c28a00;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .payday-logo {
+      width: 14px;
+      height: 14px;
     }
 
-    @page {
-      margin: 15mm;
+    @media print {
+      body {
+        margin: 8mm;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="header">
+  <header>
     <img src="icon.png" alt="BabyPay logo" />
-    <div class="header-text">
+    <div>
       <h1>BabyPay Income Calendar</h1>
-      <div class="subtitle">Estimated income across your government + paid leave period</div>
+      <div class="tagline">
+        Estimated income across your government + paid leave period
+      </div>
     </div>
+  </header>
+
+  <div class="summary">
+    <div>Total estimated income across this period: 
+      <strong>$${totalIncome.toFixed(2)}</strong> (gross)</div>
+    <div>Period: ${startLabel} – ${endLabel}</div>
+    <div>Expected main pay date each month: day ${payDay}</div>
   </div>
 
-  <div class="summary-banner">
-    Total estimated income across this period: <strong>$${totalIncomeStr}</strong> (gross)
-    ${payDay ? `<br/>Expected main pay date each month: day ${payDay}` : ""}
-  </div>
-
-  ${sections.join("")}
-
-  <div class="footer-note">
-    BabyPay is for planning only. Actual payment dates and amounts may differ;
-    please confirm with your employer, your payslips, and Services Australia.
-  </div>
+  ${monthBlocks}
 </body>
 </html>
-    `;
-  }
+  `;
+}
 
-  function buildSingleMonthSection(year, monthIndex, incomeByDay, payDay) {
-    const firstOfMonth = new Date(year, monthIndex, 1);
-    const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
-    const monthName = firstOfMonth.toLocaleString("en-AU", { month: "long" });
+// MAIN: hook up button
+(function attachCalendarButton() {
+  const btn = document.getElementById("downloadCalendar");
+  if (!btn) return;
 
-    // Start the calendar on Monday
-    const firstWeekday = (firstOfMonth.getDay() + 6) % 7; // 0 = Monday
+  btn.addEventListener("click", () => {
+    const userGrossMonthly =
+      parseFloat(document.getElementById("userIncome").value) || 0;
+    const wifeGrossMonthly =
+      parseFloat(document.getElementById("wifeIncome").value) || 0;
+    const paidWeeks =
+      parseFloat(document.getElementById("paidWeeks").value) || 0;
 
-    const cells = [];
+    const fullChecked = document.getElementById("fullPay").checked;
+    const halfChecked = document.getElementById("halfPay").checked;
 
-    // Empty cells before 1st day
-    for (let i = 0; i < firstWeekday; i++) {
-      cells.push({ empty: true });
+    if (!userGrossMonthly && !wifeGrossMonthly) {
+      alert("Please enter at least one income before downloading the calendar.");
+      return;
+    }
+    if (!paidWeeks || paidWeeks <= 0) {
+      alert("Please enter the paid leave weeks for the primary caretaker.");
+      return;
+    }
+    if (!fullChecked && !halfChecked) {
+      alert("Please choose Full or Half pay for the paid leave period.");
+      return;
     }
 
-    // One cell per day
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dateStr = formatYyyyMmDd(year, monthIndex + 1, day);
-      const amount = incomeByDay[dateStr] || 0;
-      const isPayDay = payDay && day === payDay;
-      cells.push({ day, amount, isPayDay });
+    const payRate = fullChecked ? 1 : 0.5;
+
+    const startStr = prompt(
+      "Enter the first day of your leave (YYYY-MM-DD), e.g. 2026-01-01:"
+    );
+    if (!startStr) {
+      return;
+    }
+    const startDate = new Date(startStr);
+    if (isNaN(startDate.getTime())) {
+      alert("That leave start date didn't look valid. Please use YYYY-MM-DD.");
+      return;
     }
 
-    // Break into weeks of 7
-    const rowsHtml = [];
-    for (let i = 0; i < cells.length; i += 7) {
-      const rowCells = cells.slice(i, i + 7);
-      const tdHtml = rowCells
-        .map((c) => {
-          if (c.empty) {
-            return `<td class="empty"></td>`;
-          }
-          const displayAmount =
-            c.amount > 0
-              ? `$${c.amount.toFixed(2)}`
-              : `<span class="no-pay">–</span>`;
-
-          const paydayClass = c.isPayDay ? " payday" : "";
-          const paydayLabel = c.isPayDay
-            ? `<div class="payday-label">Pay day</div>`
-            : "";
-
-          return `
-            <td class="${paydayClass}">
-              <div class="day-number">${c.day}</div>
-              <div class="day-amount">${displayAmount}</div>
-              ${paydayLabel}
-            </td>
-          `;
-        })
-        .join("");
-      rowsHtml.push(`<tr>${tdHtml}</tr>`);
+    const payDayStr = prompt(
+      "What day of the month do you expect pay to land? (1–28 is safest):",
+      "14"
+    );
+    const payDay = parseInt(payDayStr, 10);
+    if (!payDay || payDay < 1 || payDay > 31) {
+      alert("Please enter a valid pay date between 1 and 31.");
+      return;
     }
 
-    return `
-      <div class="month-block">
-        <div class="month-title">${monthName} ${year}</div>
-        <table>
-          <thead>
-            <tr>
-              <th>Mon</th>
-              <th>Tue</th>
-              <th>Wed</th>
-              <th>Thu</th>
-              <th>Fri</th>
-              <th>Sat</th>
-              <th>Sun</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rowsHtml.join("")}
-          </tbody>
-        </table>
-      </div>
-    `;
-  }
+    // --- Compute total leave length (gov + paid) ---
+    const govWeeks = 21; // labelled 21 weeks
+    const totalWeeks = govWeeks + paidWeeks;
+    const totalDays = totalWeeks * 7;
 
-  function formatYyyyMmDd(year, monthNumber1Based, day) {
-    const m = monthNumber1Based.toString().padStart(2, "0");
-    const d = day.toString().padStart(2, "0");
-    return `${year}-${m}-${d}`;
-  }
+    // Non-primary income (always working)
+    const userWeekly = (userGrossMonthly * 12) / 52;
+    const userTotal = userWeekly * totalWeeks;
+
+    // Government PPL income
+    const govWeekly = 948.10;
+    const govTotal = govWeekly * govWeeks;
+
+    // Paid leave income for primary
+    const primaryWeekly = (wifeGrossMonthly * 12) / 52 * payRate;
+    const primaryTotal = primaryWeekly * paidWeeks;
+
+    const totalIncome = userTotal + govTotal + primaryTotal;
+    const dailyRate = totalIncome / totalDays;
+
+    // Build incomeByDay map
+    const incomeByDay = {};
+    for (let i = 0; i < totalDays; i++) {
+      const d = new Date(startDate.getTime());
+      d.setDate(d.getDate() + i);
+      const dateStr = formatYyyyMmDd(
+        d.getFullYear(),
+        d.getMonth() + 1,
+        d.getDate()
+      );
+      incomeByDay[dateStr] = dailyRate;
+    }
+
+    const endDate = new Date(startDate.getTime());
+    endDate.setDate(endDate.getDate() + totalDays - 1);
+
+    const docHtml = buildCalendarDocument({
+      incomeByDay,
+      totalIncome,
+      payDay,
+      startDate,
+      endDate
+    });
+
+    const win = window.open("", "_blank");
+    if (!win) {
+      alert("Pop-up blocked. Please allow pop-ups for this site.");
+      return;
+    }
+    win.document.open();
+    win.document.write(docHtml);
+    win.document.close();
+    win.focus();
+    // Optional: auto-open print dialog
+    // win.print();
+  });
 })();

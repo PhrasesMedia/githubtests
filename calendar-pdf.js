@@ -1,15 +1,17 @@
 // calendar.js
 // Generates a BabyPay income calendar with pay-day deposits and logo
 
-// Helper: format date as YYYY-MM-DD
-function formatYyyyMmDd(year, monthIndex1Based, day) {
+// ---------- Helpers ----------
+
+// format date as YYYY-MM-DD
+function bpFormatYyyyMmDd(year, monthIndex1Based, day) {
   const m = String(monthIndex1Based).padStart(2, "0");
   const d = String(day).padStart(2, "0");
   return `${year}-${m}-${d}`;
 }
 
 // Build HTML for a single month block
-function buildSingleMonthSection(year, monthIndex0, incomeByDay, payDay) {
+function bpBuildSingleMonthSection(year, monthIndex0, incomeByDay, payDay) {
   const firstOfMonth = new Date(year, monthIndex0, 1);
   const daysInMonth = new Date(year, monthIndex0 + 1, 0).getDate();
   const monthName = firstOfMonth.toLocaleString("en-AU", { month: "long" });
@@ -20,7 +22,7 @@ function buildSingleMonthSection(year, monthIndex0, incomeByDay, payDay) {
   // 1) Work out the total income for this month
   let monthTotal = 0;
   for (let day = 1; day <= daysInMonth; day++) {
-    const dateStr = formatYyyyMmDd(year, monthIndex0 + 1, day);
+    const dateStr = bpFormatYyyyMmDd(year, monthIndex0 + 1, day);
     monthTotal += incomeByDay[dateStr] || 0;
   }
 
@@ -41,7 +43,7 @@ function buildSingleMonthSection(year, monthIndex0, incomeByDay, payDay) {
     if (payDay) {
       amount = isPayDay ? monthTotal : 0;
     } else {
-      const dateStr = formatYyyyMmDd(year, monthIndex0 + 1, day);
+      const dateStr = bpFormatYyyyMmDd(year, monthIndex0 + 1, day);
       amount = incomeByDay[dateStr] || 0;
     }
 
@@ -106,7 +108,7 @@ function buildSingleMonthSection(year, monthIndex0, incomeByDay, payDay) {
 }
 
 // Build full document HTML
-function buildCalendarDocument({
+function bpBuildCalendarDocument({
   incomeByDay,
   totalIncome,
   payDay,
@@ -125,7 +127,7 @@ function buildCalendarDocument({
 
   const monthBlocks = months
     .map((m) =>
-      buildSingleMonthSection(m.year, m.monthIndex0, incomeByDay, payDay)
+      bpBuildSingleMonthSection(m.year, m.monthIndex0, incomeByDay, payDay)
     )
     .join("");
 
@@ -263,12 +265,10 @@ function buildCalendarDocument({
   `;
 }
 
-// MAIN: hook up button
-(function attachCalendarButton() {
-  const btn = document.getElementById("downloadCalendar");
-  if (!btn) return;
+// ---------- Main handler ----------
 
-  btn.addEventListener("click", () => {
+function bpHandleDownloadCalendarClick() {
+  try {
     const userGrossMonthly =
       parseFloat(document.getElementById("userIncome").value) || 0;
     const wifeGrossMonthly =
@@ -341,7 +341,7 @@ function buildCalendarDocument({
     for (let i = 0; i < totalDays; i++) {
       const d = new Date(startDate.getTime());
       d.setDate(d.getDate() + i);
-      const dateStr = formatYyyyMmDd(
+      const dateStr = bpFormatYyyyMmDd(
         d.getFullYear(),
         d.getMonth() + 1,
         d.getDate()
@@ -352,7 +352,7 @@ function buildCalendarDocument({
     const endDate = new Date(startDate.getTime());
     endDate.setDate(endDate.getDate() + totalDays - 1);
 
-    const docHtml = buildCalendarDocument({
+    const docHtml = bpBuildCalendarDocument({
       incomeByDay,
       totalIncome,
       payDay,
@@ -369,7 +369,20 @@ function buildCalendarDocument({
     win.document.write(docHtml);
     win.document.close();
     win.focus();
-    // Optional: auto-open print dialog
-    // win.print();
-  });
-})();
+    // win.print(); // optional
+  } catch (err) {
+    console.error("BabyPay calendar error", err);
+    alert("Sorry, something went wrong generating the calendar. Check the console for details.");
+  }
+}
+
+// ---------- Wire up button once DOM is ready ----------
+
+window.addEventListener("DOMContentLoaded", () => {
+  const btn = document.getElementById("downloadCalendar");
+  if (!btn) {
+    console.error("BabyPay: #downloadCalendar button not found.");
+    return;
+  }
+  btn.addEventListener("click", bpHandleDownloadCalendarClick);
+});

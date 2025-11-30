@@ -1,5 +1,5 @@
 // calendar-pdf.js
-// Generate an income calendar and open a print dialog so the user can save as PDF.
+// Generate a multi-month income calendar and open a print dialog so the user can save as PDF.
 
 (function () {
   const btn = document.getElementById("downloadCalendarBtn");
@@ -14,33 +14,30 @@
       return;
     }
 
-    // For v1, use the month/year of the first entry
-    const firstDate = new Date(incomeEntries[0].date);
-    const year = firstDate.getFullYear();
-    const monthIndex = firstDate.getMonth(); // 0–11
-
-    openIncomeCalendarWindow(year, monthIndex, incomeEntries);
+    openIncomeCalendarWindow(incomeEntries);
   });
 
-  // ---- Demo data for now ----
+  // ---- Demo data for now (covers multiple months so you can see it working) ----
   function getExampleIncomeData() {
-    // Example: two fortnightly pay days + one government payment
+    // Example: income over three months
     return [
       { date: "2026-01-02", amount: 3200 },
       { date: "2026-01-16", amount: 3200 },
-      { date: "2026-01-23", amount: 948.10 }
+      { date: "2026-01-23", amount: 948.10 },
+      { date: "2026-02-06", amount: 3200 },
+      { date: "2026-02-20", amount: 3200 },
+      { date: "2026-03-06", amount: 3200 },
     ];
   }
 
   // ---- Core logic ----
-  function openIncomeCalendarWindow(year, monthIndex, incomeEntries) {
+
+  function openIncomeCalendarWindow(incomeEntries) {
+    const { minDate, maxDate } = getMinMaxDates(incomeEntries);
     const incomeByDay = groupIncomeByDay(incomeEntries);
 
-    const monthName = new Date(year, monthIndex, 1).toLocaleString("en-AU", {
-      month: "long",
-    });
-
-    const html = buildCalendarHtml(year, monthIndex, monthName, incomeByDay);
+    const baseHref = getBaseHref();
+    const html = buildMultiMonthCalendarHtml(minDate, maxDate, incomeByDay, baseHref);
 
     const win = window.open("", "_blank");
     if (!win) {
@@ -54,8 +51,21 @@
 
     win.focus();
     setTimeout(() => {
-      win.print();          // user can choose "Save as PDF"
+      win.print(); // user can choose "Save as PDF"
     }, 300);
+  }
+
+  function getMinMaxDates(entries) {
+    let minDate = null;
+    let maxDate = null;
+
+    entries.forEach((e) => {
+      const d = new Date(e.date);
+      if (!minDate || d < minDate) minDate = d;
+      if (!maxDate || d > maxDate) maxDate = d;
+    });
+
+    return { minDate, maxDate };
   }
 
   function groupIncomeByDay(entries) {
@@ -68,62 +78,50 @@
     return map;
   }
 
-  function buildCalendarHtml(year, monthIndex, monthName, incomeByDay) {
-    const firstOfMonth = new Date(year, monthIndex, 1);
-    const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+  function getBaseHref() {
+    // Use the current page URL as a base so relative paths like "icon.png" work in the new window.
+    let href = window.location.href;
+    // Strip query/hash
+    href = href.replace(/[#?].*$/, "");
+    // If it ends with a file name (no trailing slash), drop everything after the last "/"
+    if (!href.endsWith("/")) {
+      href = href.replace(/[^\/]*$/, "");
+    }
+    return href;
+  }
 
-    // Start the calendar on Monday
-    const firstWeekday = (firstOfMonth.getDay() + 6) % 7; // 0 = Monday
+  function buildMultiMonthCalendarHtml(minDate, maxDate, incomeByDay, baseHref) {
+    const startYear = minDate.getFullYear();
+    const startMonth = minDate.getMonth(); // 0–11
+    const endYear = maxDate.getFullYear();
+    const endMonth = maxDate.getMonth();
 
-    const cells = [];
+    const sections = [];
+    let y = startYear;
+    let m = startMonth;
 
-    // Empty cells before 1st of the month
-    for (let i = 0; i < firstWeekday; i++) {
-      cells.push({ empty: true });
+    while (y < endYear || (y === endYear && m <= endMonth)) {
+      const sectionHtml = buildSingleMonthSection(y, m, incomeByDay);
+      sections.push(sectionHtml);
+
+      m++;
+      if (m > 11) {
+        m = 0;
+        y++;
+      }
     }
 
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dateStr = formatYyyyMmDd(year, monthIndex + 1, day);
-      const amount = incomeByDay[dateStr] || 0;
-      cells.push({ day, amount });
-    }
-
-    // Break into rows of 7
-    const rowsHtml = [];
-    for (let i = 0; i < cells.length; i += 7) {
-      const rowCells = cells.slice(i, i + 7);
-      const tdHtml = rowCells
-        .map((c) => {
-          if (c.empty) {
-            return `<td class="empty"></td>`;
-          }
-          const displayAmount =
-            c.amount > 0
-              ? `$${c.amount.toFixed(2)}`
-              : `<span class="no-pay">–</span>`;
-          return `
-            <td>
-              <div class="day-number">${c.day}</div>
-              <div class="day-amount">${displayAmount}</div>
-            </td>
-          `;
-        })
-        .join("");
-      rowsHtml.push(`<tr>${tdHtml}</tr>`);
-    }
-
-    const totalMonthIncome = Object.values(incomeByDay).reduce(
-      (sum, v) => sum + v,
-      0
-    );
+    const totalIncome = Object.values(incomeByDay).reduce((sum, v) => sum + v, 0);
+    const totalIncomeStr = totalIncome.toFixed(2);
 
     return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>BabyPay Income Calendar – ${monthName} ${year}</title>
+  <title>BabyPay Income Calendar</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <base href="${baseHref}">
   <style>
     * { box-sizing: border-box; }
 
@@ -133,20 +131,43 @@
       color: #222;
     }
 
-    h1 {
-      font-size: 22px;
-      margin: 0 0 4px 0;
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
     }
 
-    .subtitle {
+    .header img {
+      height: 40px;
+      width: auto;
+    }
+
+    .header-text h1 {
+      font-size: 22px;
+      margin: 0;
+    }
+
+    .header-text .subtitle {
       font-size: 13px;
-      margin-bottom: 16px;
+      margin-top: 2px;
       color: #555;
     }
 
-    .month-summary {
+    .summary-banner {
       font-size: 13px;
-      margin-bottom: 12px;
+      margin: 10px 0 18px 0;
+    }
+
+    .month-block {
+      page-break-inside: avoid;
+      margin-bottom: 24px;
+    }
+
+    .month-title {
+      font-size: 16px;
+      font-weight: bold;
+      margin: 8px 0;
     }
 
     table {
@@ -200,36 +221,95 @@
   </style>
 </head>
 <body>
-  <h1>BabyPay Income Calendar</h1>
-  <div class="subtitle">${monthName} ${year}</div>
-
-  <div class="month-summary">
-    Total income this month: <strong>$${totalMonthIncome.toFixed(2)}</strong>
+  <div class="header">
+    <img src="icon.png" alt="BabyPay logo" />
+    <div class="header-text">
+      <h1>BabyPay Income Calendar</h1>
+      <div class="subtitle">Estimated income across your leave period</div>
+    </div>
   </div>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Mon</th>
-        <th>Tue</th>
-        <th>Wed</th>
-        <th>Thu</th>
-        <th>Fri</th>
-        <th>Sat</th>
-        <th>Sun</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${rowsHtml.join("")}
-    </tbody>
-  </table>
+  <div class="summary-banner">
+    Total estimated income across this period: <strong>$${totalIncomeStr}</strong>
+  </div>
+
+  ${sections.join("")}
 
   <div class="footer-note">
-    BabyPay – for planning only. Actual payment dates and amounts may differ;
+    BabyPay is for planning only. Actual payment dates and amounts may differ;
     please confirm with your employer and Services Australia.
   </div>
 </body>
 </html>
+    `;
+  }
+
+  function buildSingleMonthSection(year, monthIndex, incomeByDay) {
+    const firstOfMonth = new Date(year, monthIndex, 1);
+    const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+    const monthName = firstOfMonth.toLocaleString("en-AU", { month: "long" });
+
+    // Start the calendar on Monday
+    const firstWeekday = (firstOfMonth.getDay() + 6) % 7; // 0 = Monday
+
+    const cells = [];
+
+    // Empty cells before 1st day
+    for (let i = 0; i < firstWeekday; i++) {
+      cells.push({ empty: true });
+    }
+
+    // One cell per day
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = formatYyyyMmDd(year, monthIndex + 1, day);
+      const amount = incomeByDay[dateStr] || 0;
+      cells.push({ day, amount });
+    }
+
+    // Break into weeks of 7
+    const rowsHtml = [];
+    for (let i = 0; i < cells.length; i += 7) {
+      const rowCells = cells.slice(i, i + 7);
+      const tdHtml = rowCells
+        .map((c) => {
+          if (c.empty) {
+            return `<td class="empty"></td>`;
+          }
+          const displayAmount =
+            c.amount > 0
+              ? `$${c.amount.toFixed(2)}`
+              : `<span class="no-pay">–</span>`;
+          return `
+            <td>
+              <div class="day-number">${c.day}</div>
+              <div class="day-amount">${displayAmount}</div>
+            </td>
+          `;
+        })
+        .join("");
+      rowsHtml.push(`<tr>${tdHtml}</tr>`);
+    }
+
+    return `
+      <div class="month-block">
+        <div class="month-title">${monthName} ${year}</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Mon</th>
+              <th>Tue</th>
+              <th>Wed</th>
+              <th>Thu</th>
+              <th>Fri</th>
+              <th>Sat</th>
+              <th>Sun</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml.join("")}
+          </tbody>
+        </table>
+      </div>
     `;
   }
 

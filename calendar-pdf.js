@@ -1,4 +1,4 @@
-// calendar.js
+// calendar-pdf.js
 // Generates a BabyPay income calendar with pay-day deposits and logo
 
 // ---------- Helpers ----------
@@ -326,11 +326,11 @@ function bpHandleDownloadCalendarClick() {
     const userTotal = userWeekly * totalWeeks;
 
     // Government PPL income
-    const govWeekly = 948.10;
+    const govWeekly = 948.10; // update if you change the base rate
     const govTotal = govWeekly * govWeeks;
 
     // Paid leave income for primary
-    const primaryWeekly = (wifeGrossMonthly * 12) / 52 * payRate;
+    const primaryWeekly = ((wifeGrossMonthly * 12) / 52) * payRate;
     const primaryTotal = primaryWeekly * paidWeeks;
 
     const totalIncome = userTotal + govTotal + primaryTotal;
@@ -372,16 +372,18 @@ function bpHandleDownloadCalendarClick() {
     // win.print(); // optional
   } catch (err) {
     console.error("BabyPay calendar error", err);
-    alert("Sorry, something went wrong generating the calendar. Check the console for details.");
+    alert(
+      "Sorry, something went wrong generating the calendar. Check the console for details."
+    );
   }
 }
 
 // ---------- Wire up button once DOM is ready ----------
 
 window.addEventListener("DOMContentLoaded", () => {
-  const btn = document.getElementById("downloadCalendar");
+  const btn = document.getElementById("downloadCalendarBtn");
   if (!btn) {
-    console.error("BabyPay: #downloadCalendar button not found.");
+    console.error("BabyPay: #downloadCalendarBtn button not found.");
     return;
   }
   btn.addEventListener("click", bpHandleDownloadCalendarClick);
